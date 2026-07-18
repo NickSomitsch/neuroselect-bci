@@ -19,6 +19,7 @@ class SessionEvent(StrEnum):
     REQUEST_FINALIZATION = "request_finalization"
     CONFIRM_FINALIZATION = "confirm_finalization"
     REJECT_FINALIZATION = "reject_finalization"
+    RETURN_TO_DRAFT = "return_to_draft"
     CANCEL_SESSION = "cancel_session"
 
 
@@ -43,6 +44,7 @@ _TRANSITIONS: dict[tuple[SessionState, SessionEvent], SessionState] = {
         SessionState.AWAITING_SELECTION_CONFIRMATION,
         SessionEvent.REJECT_SELECTION,
     ): SessionState.CANDIDATES_READY,
+    (SessionState.SELECTING, SessionEvent.REJECT_SELECTION): SessionState.CANDIDATES_READY,
     (SessionState.SELECTING, SessionEvent.REPEAT_SELECTION): SessionState.SELECTING,
     (
         SessionState.AWAITING_SELECTION_CONFIRMATION,
@@ -59,6 +61,13 @@ _TRANSITIONS: dict[tuple[SessionState, SessionEvent], SessionState] = {
     (
         SessionState.AWAITING_FINAL_CONFIRMATION,
         SessionEvent.REJECT_FINALIZATION,
+    ): SessionState.DRAFT,
+    (SessionState.DRAFT, SessionEvent.RETURN_TO_DRAFT): SessionState.DRAFT,
+    (SessionState.CANDIDATES_READY, SessionEvent.RETURN_TO_DRAFT): SessionState.DRAFT,
+    (SessionState.SELECTING, SessionEvent.RETURN_TO_DRAFT): SessionState.DRAFT,
+    (
+        SessionState.AWAITING_SELECTION_CONFIRMATION,
+        SessionEvent.RETURN_TO_DRAFT,
     ): SessionState.DRAFT,
 }
 

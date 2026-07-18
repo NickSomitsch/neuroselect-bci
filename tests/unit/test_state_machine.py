@@ -26,6 +26,11 @@ def test_rejected_selection_preserves_candidate_set() -> None:
     )
     assert state is SessionState.CANDIDATES_READY
 
+    assert (
+        transition(SessionState.SELECTING, SessionEvent.REJECT_SELECTION)
+        is SessionState.CANDIDATES_READY
+    )
+
 
 @pytest.mark.parametrize(
     "state",
@@ -76,3 +81,16 @@ def test_finalization_can_be_rejected() -> None:
         )
         is SessionState.DRAFT
     )
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        SessionState.DRAFT,
+        SessionState.CANDIDATES_READY,
+        SessionState.SELECTING,
+        SessionState.AWAITING_SELECTION_CONFIRMATION,
+    ],
+)
+def test_explicit_back_clear_or_other_path_can_return_to_draft(state: SessionState) -> None:
+    assert transition(state, SessionEvent.RETURN_TO_DRAFT) is SessionState.DRAFT

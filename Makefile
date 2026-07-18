@@ -1,4 +1,4 @@
-.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke format format-check lint typecheck test build verify
+.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke api format format-check lint typecheck test build verify
 
 setup: sync ui-install
 
@@ -16,6 +16,9 @@ synthetic-knowledge:
 
 fusion-smoke:
 	uv run python scripts/run_fusion_smoke.py
+
+api:
+	uv run python scripts/run_api.py
 
 format:
 	uv run ruff format src tests scripts

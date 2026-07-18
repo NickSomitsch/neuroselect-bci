@@ -18,6 +18,7 @@ synthetic evaluation assets:
 - A structured deterministic candidate generator with deduplication and explicit controls.
 - A local SQLite personal-knowledge store with safe lexical retrieval and provenance.
 - A transparent fusion ranker with LM-dominance, repeat, abstention, and risk safeguards.
+- A loopback session API with manual/simulated rounds and explicit confirmation boundaries.
 - Locked research-scope, dataset, and local-first architecture decisions.
 - Linting, type checking, tests, and continuous integration.
 
@@ -71,6 +72,17 @@ The ranker records every normalized input and weighted contribution. A displayed
 is still provisional: automatic selection is forbidden and explicit confirmation remains
 required.
 
+Run the local research API at the configured loopback address with:
+
+```bash
+make api
+```
+
+The versioned `/api/v1` routes support session creation, candidate rounds, select/reject/repeat,
+back, clear, other, cancel, manual debug text, enhanced selection confirmation, and one-time
+final-message confirmation. Simulator ground truth and confirmation secrets are not exposed in
+ordinary session views.
+
 The tracked recipe emits exactly 1,000 training, 150 validation, and 250 test messages
 for each of four personas. Templates and topics are disjoint across splits, every target
 span is at most four whitespace-delimited tokens, and identical source files produce
@@ -82,7 +94,7 @@ Research artifacts, downloaded datasets, and model weights belong under the igno
 
 The first real-data integration will use offline P300 replay. Recorded target evidence may be mapped to visible candidate tiles for counterfactual system evaluation, but the resulting words were not selected live by the original participants. Original-task decoder results, counterfactual replay results, and controlled simulation results must always be reported separately.
 
-See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), and [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md) before contributing claims or experiment code.
+See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), and [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md) before contributing claims or experiment code.
 
 ## License
 
