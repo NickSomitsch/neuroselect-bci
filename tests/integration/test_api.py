@@ -48,6 +48,15 @@ def test_manual_api_flow_requires_explicit_final_confirmation() -> None:
             "service": "neuroselect",
             "api_version": "v1",
         }
+        profiles = client.get("/api/v1/profiles")
+        assert profiles.status_code == 200
+        assert [profile["profile_id"] for profile in profiles.json()] == [
+            "synthetic-casual",
+            "synthetic-concise",
+            "synthetic-formal",
+            "synthetic-reflective",
+        ]
+        assert all(profile["synthetic"] is True for profile in profiles.json())
         created = client.post(
             "/api/v1/sessions",
             json={"profile_id": "synthetic-concise", "input_mode": "manual"},
@@ -57,11 +66,16 @@ def test_manual_api_flow_requires_explicit_final_confirmation() -> None:
 
         round_response = client.post(
             f"/api/v1/sessions/{session_id}/rounds",
-            json={"simulated_target_index": 0},
+            json={
+                "simulated_target_index": 0,
+                "candidate_count": 6,
+                "maximum_phrase_tokens": 2,
+            },
         )
         assert round_response.status_code == 200
         round_payload = round_response.json()
         assert round_payload["ranking"]["disposition"] == "abstain"
+        assert len(round_payload["active_generation"]["candidate_set"]["candidates"]) == 6
         candidate_id = round_payload["ranking"]["fused_top_candidate_id"]
 
         selected = client.post(

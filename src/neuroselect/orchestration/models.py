@@ -25,12 +25,25 @@ class CreateSessionRequest(BaseModel):
     input_mode: SessionInputMode = SessionInputMode.SIMULATION
 
 
+class ProfileSummary(BaseModel):
+    """Public, synthetic profile metadata safe to expose in the local UI."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    profile_id: Identifier
+    display_name: str = Field(min_length=1, max_length=120)
+    style_summary: str = Field(min_length=1, max_length=500)
+    synthetic: Literal[True]
+
+
 class RoundRequest(BaseModel):
     """Simulation ground truth is an explicit demo input, never an inferred thought."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     simulated_target_index: int = Field(default=0, ge=0, le=11)
+    candidate_count: Literal[4, 6, 8, 12] | None = None
+    maximum_phrase_tokens: int | None = Field(default=None, ge=1, le=8)
 
 
 class SessionActionRequest(BaseModel):

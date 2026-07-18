@@ -38,6 +38,7 @@ from neuroselect.orchestration.models import (
     CreateSessionRequest,
     FinalizationChallenge,
     ManualTextRequest,
+    ProfileSummary,
     RoundRequest,
     SelectionConfirmationRequest,
     SessionActionRequest,
@@ -168,6 +169,17 @@ class SessionOrchestrator:
     def get_session(self, session_id: str) -> SessionView:
         return self._view(self._runtime(session_id))
 
+    def list_profiles(self) -> tuple[ProfileSummary, ...]:
+        return tuple(
+            ProfileSummary(
+                profile_id=profile.profile_id,
+                display_name=profile.display_name,
+                style_summary=profile.style_summary,
+                synthetic=profile.synthetic,
+            )
+            for profile in sorted(self.profiles.values(), key=lambda item: item.profile_id)
+        )
+
     def start_round(self, session_id: str, request: RoundRequest) -> SessionView:
         runtime = self._runtime(session_id)
         now = self._now()
@@ -176,8 +188,12 @@ class SessionOrchestrator:
             generation = self.candidate_generator.generate(
                 CandidateGenerationRequest(
                     confirmed_text=runtime.session.confirmed_text,
-                    candidate_count=self.session_policy.candidate_count,
-                    maximum_phrase_tokens=self.session_policy.maximum_phrase_tokens,
+                    candidate_count=(
+                        request.candidate_count or self.session_policy.candidate_count
+                    ),
+                    maximum_phrase_tokens=(
+                        request.maximum_phrase_tokens or self.session_policy.maximum_phrase_tokens
+                    ),
                 )
             )
             language_candidates = tuple(

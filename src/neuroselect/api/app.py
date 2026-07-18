@@ -13,6 +13,7 @@ from neuroselect.orchestration import (
     CreateSessionRequest,
     FinalizationChallenge,
     ManualTextRequest,
+    ProfileSummary,
     RoundRequest,
     SelectionConfirmationRequest,
     SessionActionRequest,
@@ -73,6 +74,10 @@ def create_app(service: SessionOrchestrator | None = None) -> FastAPI:
     )
     async def create_session(request: CreateSessionRequest) -> SessionView:
         return orchestrator.create_session(request)
+
+    @app.get("/api/v1/profiles", response_model=tuple[ProfileSummary, ...])
+    async def list_profiles() -> tuple[ProfileSummary, ...]:
+        return orchestrator.list_profiles()
 
     @app.get("/api/v1/sessions/{session_id}", response_model=SessionView)
     async def get_session(session_id: str) -> SessionView:

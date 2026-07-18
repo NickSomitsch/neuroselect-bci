@@ -1,0 +1,40 @@
+schema_version: "1.0"
+experiment_id: simulated-vertical-slice-v1
+protocol_revision: controlled-fusion-evaluation-v1
+seed: 20260717
+split: test
+profile_ids:
+  - synthetic-casual
+  - synthetic-concise
+  - synthetic-formal
+  - synthetic-reflective
+message_limit_per_profile: 3
+candidate_count: 8
+maximum_phrase_tokens: 4
+conditions:
+  - a_bci_only
+  - b_generic_language_only
+  - c_neural_language
+  - current_neural_language_rag
+  - current_safe_fusion
+  - ablation_uniform_neural
+  - ablation_shuffled_neural
+  - ablation_remove_rag
+  - ablation_shuffled_retrieval
+  - ablation_irrelevant_retrieval
+  - ablation_remove_context
+calibration_bins: 10
+language_conflict_every_n_trials: 4
+evaluation_time: 2026-07-18T12:00:00Z
+timing:
+  candidate_round_seconds: 2.0
+  explicit_action_seconds: 1.0
+  enhanced_confirmation_seconds: 1.0
+simulator:
+  seed: 20260717
+  target_concentration: 18.0
+  distractor_concentration: 1.0
+  ambiguous_concentration: 10.0
+  lapse_probability: 0.08
+  ambiguous_probability: 0.12
+  timeline_origin: 2026-01-01T00:00:00Z

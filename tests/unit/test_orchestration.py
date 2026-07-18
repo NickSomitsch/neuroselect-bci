@@ -129,6 +129,35 @@ def test_simulated_round_connects_all_components_without_selecting(
     assert "simulation" not in view.model_dump()
 
 
+def test_profiles_are_public_synthetic_summaries_and_round_size_is_configurable(
+    service_bundle: tuple[SessionOrchestrator, MutableClock],
+) -> None:
+    service, _ = service_bundle
+    profiles = service.list_profiles()
+
+    assert [profile.profile_id for profile in profiles] == sorted(
+        profile.profile_id for profile in profiles
+    )
+    assert all(profile.synthetic for profile in profiles)
+    assert all(profile.display_name and profile.style_summary for profile in profiles)
+
+    session_id = create(service)
+    view = service.start_round(
+        session_id,
+        RoundRequest(candidate_count=6, maximum_phrase_tokens=2, simulated_target_index=2),
+    )
+
+    assert view.active_generation is not None
+    assert len(view.active_generation.candidate_set.candidates) == 6
+    language_candidates = view.active_generation.generic_language_support
+    assert len(language_candidates) == 3
+    assert all(
+        len(candidate.text.split()) <= 2
+        for candidate in view.active_generation.candidate_set.candidates
+        if candidate.candidate_id in language_candidates
+    )
+
+
 def test_standard_explicit_selection_appends_only_the_selected_candidate(
     service_bundle: tuple[SessionOrchestrator, MutableClock],
 ) -> None:
