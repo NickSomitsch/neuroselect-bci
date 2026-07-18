@@ -1,4 +1,4 @@
-.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation api format format-check lint typecheck test build verify
+.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation study-p-data api format format-check lint typecheck test build verify
 
 setup: sync ui-install
 
@@ -19,6 +19,9 @@ fusion-smoke:
 
 simulated-evaluation:
 	uv run python scripts/run_simulated_evaluation.py
+
+study-p-data:
+	uv run python scripts/prepare_study_p.py $(STUDY_P_ARGS)
 
 api:
 	uv run python scripts/run_api.py

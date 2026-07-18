@@ -1,11 +1,106 @@
+schema_version: "1.0"
 dataset_id: bigp3bci-study-p
 source_version: "1.0.0"
-moabb_class: Mainsah2025_P
+study: P
 source_url: https://physionet.org/content/bigp3bci/1.0.0/
-license: CC-BY-4.0
+file_base_url: https://physionet.org/files/bigp3bci/1.0.0/
+doi: 10.13026/0byy-ry86
+license:
+  id: CC-BY-4.0
+  url: https://creativecommons.org/licenses/by/4.0/
+checksum_inventory:
+  url: https://physionet.org/files/bigp3bci/1.0.0/SHA256SUMS.txt
+  sha256: 75ce052ae8626a73b43887c994c4c0d17e5b0d775ad3083f759af20028e32fbb
+download_policy: explicit_license_acceptance_only
+raw_data_immutable: true
+
 paradigm: p300
+source_file_count: 228
 subjects: 19
-sessions: 2
+subject_ids:
+  - P_01
+  - P_02
+  - P_03
+  - P_04
+  - P_05
+  - P_06
+  - P_07
+  - P_08
+  - P_09
+  - P_10
+  - P_11
+  - P_12
+  - P_13
+  - P_14
+  - P_15
+  - P_16
+  - P_17
+  - P_18
+  - P_19
+sessions:
+  - SE001
+  - SE002
 channels: 32
 sampling_rate_hz: 256
-download_enabled: false
+line_frequency_hz: 60
+event_channels:
+  onset: StimulusBegin
+  label: StimulusType
+  optional_metadata:
+    - StimulusCode
+    - SelectedTarget
+    - CurrentTarget
+    - PhaseInSequence
+labels:
+  -1: unknown
+  0: non_target
+  1: target
+zero_only_stimulus_type_policy: unknown_not_non_target
+labeled_training_blocks_required_to_contain_both_classes: true
+participant_group: non_als
+participant_group_evidence: source_edf_headers
+participant_group_header_audit: 19_of_19_subjects
+
+preprocessing:
+  low_cut_hz: 0.5
+  high_cut_hz: 20.0
+  notch_hz: 60.0
+  reference: average
+  epoch_start_seconds: -0.1
+  epoch_end_seconds: 0.8
+  baseline_seconds: [-0.1, 0.0]
+  output_sampling_rate_hz: 128.0
+  reject_peak_to_peak_v: 0.00015
+  flat_peak_to_peak_v: 0.0000005
+
+model_split:
+  strategy: subject_separated
+  seed: 20260718
+  train_subjects:
+    - P_01
+    - P_03
+    - P_04
+    - P_05
+    - P_07
+    - P_08
+    - P_10
+    - P_12
+    - P_14
+    - P_15
+    - P_16
+    - P_18
+    - P_19
+  validation_subjects:
+    - P_06
+    - P_09
+    - P_17
+  test_subjects:
+    - P_02
+    - P_11
+    - P_13
+session_drift_folds:
+  - train_sessions: [SE001]
+    test_sessions: [SE002]
+  - train_sessions: [SE002]
+    test_sessions: [SE001]
+source_train_test_folders_are_model_splits: false

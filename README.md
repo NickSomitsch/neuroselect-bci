@@ -23,6 +23,8 @@ synthetic evaluation assets:
   exact-text final confirmation.
 - A deterministic held-out simulation experiment matrix with paired baselines, safety ablations,
   calibration and communication metrics, and checksum-addressed JSON artifacts.
+- A pinned bigP3BCI Study P inventory/import layer with MNE preprocessing, artifact reports,
+  standardized FIF/NumPy artifacts, and subject/session leakage controls.
 - Locked research-scope, dataset, and local-first architecture decisions.
 - Linting, type checking, tests, and continuous integration.
 
@@ -99,6 +101,19 @@ span visible to isolate fusion behavior; it does not measure unconstrained langu
 recall or real EEG performance. Planned LoRA and complete calibrated-system conditions are listed
 but cannot run until those components have real held-out implementations.
 
+Review the Study P dataset card and explicitly prepare a one-recording smoke slice with:
+
+```bash
+make study-p-data STUDY_P_ARGS="--download --accept-license --subjects P_01 --source-partitions train --limit-files 1"
+```
+
+The command verifies the pinned PhysioNet checksum inventory and every EDF before use, preserves
+raw files under ignored `data/raw/`, and emits EEG-only MNE FIF plus decoder-ready epochs and typed
+checksum sidecars under ignored `data/processed/`. Remove `--limit-files` to process every block
+for the named subject. Dataset-author `Train`/`Test` folder labels are never treated as model
+splits; the tracked primary split holds out entire subjects, with separate bidirectional
+cross-session folds for drift analysis. Setup and CI remain offline.
+
 Run the local research API at the configured loopback address with:
 
 ```bash
@@ -121,7 +136,7 @@ Research artifacts, downloaded datasets, and model weights belong under the igno
 
 The first real-data integration will use offline P300 replay. Recorded target evidence may be mapped to visible candidate tiles for counterfactual system evaluation, but the resulting words were not selected live by the original participants. Original-task decoder results, counterfactual replay results, and controlled simulation results must always be reported separately.
 
-See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), and [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md) before contributing claims or experiment code.
+See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), and [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md) before contributing claims or experiment code.
 
 ## License
 
