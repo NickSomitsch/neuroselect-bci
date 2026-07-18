@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+title: "NeuroSelect: Personalized, Uncertainty-Aware Language Prediction for Non-Invasive BCI Communication"
+message: "If you use NeuroSelect, cite this software and the dataset/model sources recorded in the run manifest."
+type: software
+authors:
+  - family-names: Somitsch
+    given-names: Nick
+license: MIT
+repository-code: "https://github.com/NickSomitsch/neuroselect-bci"
+version: 0.1.0-dev
+date-released: 2026-07-17
+keywords:
+  - brain-computer interface
+  - P300
+  - augmentative and alternative communication
+  - language prediction
+  - uncertainty

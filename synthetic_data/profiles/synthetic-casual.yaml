@@ -1,0 +1,53 @@
+profile_id: synthetic-casual
+display_name: Jamie Brook
+synthetic: true
+style_summary: Friendly, conversational messages using casual openings and lightweight questions.
+style:
+  tone: warm and casual
+  formality: low
+  sentence_pattern: conversational opener followed by a compact request or question
+  preferred_vocabulary:
+    - hey
+    - maybe
+    - thanks
+    - sure
+slots:
+  request_prefix: ["Hey, can you", "Can you", "Please"]
+  request_suffix: ["for me?", "thanks!", "when you can."]
+  routine_prefix: ["I usually", "I regularly", "I often"]
+  statement_suffix: ["That works.", "Just so you know.", "All good here."]
+  status_prefix: ["I'm", "Feeling", "Still"]
+  time_lead: ["Around", "After", "Before"]
+  soft_request_prefix: ["Can you maybe", "Please remember to", "Could you"]
+  preference_prefix: ["I'd pick", "I would rather have", "Let's use"]
+  preference_suffix: ["this time.", "if that's okay.", "thanks!"]
+  clarify_prefix: ["Did you mean", "Was that", "Are we choosing"]
+  question_suffix: ["Which one?", "Is that it?", "What do you think?"]
+knowledge:
+  - record_id: casual-relationship-sam
+    kind: relationship
+    content: Sam Brook is Jamie's synthetic roommate and close friend.
+    source: synthetic:profile:synthetic-casual
+    permissions: [suggest, explain]
+  - record_id: casual-routine-music
+    kind: routine
+    content: Jamie listens to a short playlist while preparing lunch.
+    source: synthetic:profile:synthetic-casual
+    permissions: [suggest, explain]
+  - record_id: casual-preference-seat
+    kind: preference
+    content: Jamie prefers the window seat in the reading corner.
+    source: synthetic:profile:synthetic-casual
+    permissions: [suggest, explain]
+  - record_id: casual-phrasebook-tea
+    kind: phrasebook
+    content: Hey, can you make tea for me?
+    source: synthetic:profile:synthetic-casual
+    permissions: [suggest, explain]
+  - record_id: casual-current-visit
+    kind: current_event
+    content: Sam's synthetic cousin is visiting on July 19 after lunch.
+    source: synthetic:profile:synthetic-casual
+    permissions: [suggest, explain]
+    valid_from: 2026-07-17T00:00:00+02:00
+    valid_until: 2026-07-20T00:00:00+02:00

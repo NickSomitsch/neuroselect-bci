@@ -1,0 +1,172 @@
+schema_version: "1.0"
+seed: 20260717
+maximum_span_tokens: 4
+
+global_slots:
+  action:
+    - bring
+    - move
+    - open
+    - close
+    - charge
+    - find
+    - check
+    - refill
+    - prepare
+    - place
+    - send
+    - read
+  object:
+    - the water bottle
+    - my notebook
+    - the phone charger
+    - the blue folder
+    - my headphones
+    - the coffee mug
+    - the house keys
+    - the desk lamp
+    - the shopping list
+    - the soft blanket
+    - the window shade
+    - the tablet stand
+    - the wall calendar
+    - today's mail
+    - the lunch bag
+    - the remote control
+  location:
+    - the kitchen
+    - the front desk
+    - the living room
+    - the quiet room
+    - the side table
+    - the top drawer
+    - the hallway shelf
+    - the office
+    - the reading corner
+    - the entryway
+  time_reference:
+    - eight o'clock
+    - nine thirty
+    - late morning
+    - before lunch
+    - early afternoon
+    - three o'clock
+    - after the break
+    - before dinner
+    - this evening
+    - tomorrow morning
+  activity:
+    - read quietly
+    - check messages
+    - plan tomorrow
+    - review notes
+    - make tea
+    - call home
+    - write briefly
+    - tidy up
+    - listen closely
+    - rest indoors
+    - organize papers
+    - prepare lunch
+  state:
+    - ready
+    - comfortable
+    - tired
+    - focused
+    - finished
+    - waiting
+    - uncertain
+    - available
+    - busy
+    - cold
+    - warm
+    - hungry
+  option:
+    - the quieter option
+    - the earlier time
+    - the blue version
+    - the smaller cup
+    - the window seat
+    - the written summary
+    - the short route
+    - the second choice
+    - the lighter blanket
+    - the morning slot
+    - the simple layout
+    - the slower pace
+    - the private room
+    - the paper copy
+    - the usual order
+    - the first suggestion
+
+splits:
+  train:
+    count_per_profile: 1000
+    templates:
+      - template_id: train-direct-request
+        topic: daily_request
+        segments:
+          - "{request_prefix} {action}"
+          - "{object}"
+          - "{request_suffix}"
+      - template_id: train-location-request
+        topic: object_location
+        segments:
+          - "{request_prefix} {action}"
+          - "{object}"
+          - "to {location}"
+          - "{request_suffix}"
+      - template_id: train-routine-statement
+        topic: stable_routine
+        segments:
+          - "{routine_prefix} {activity}"
+          - "at {time_reference}"
+          - "{statement_suffix}"
+      - template_id: train-status-update
+        topic: status_statement
+        segments:
+          - "{status_prefix} {state}"
+          - "near {location}"
+          - "{statement_suffix}"
+
+  validation:
+    count_per_profile: 150
+    templates:
+      - template_id: validation-time-first
+        topic: scheduled_request
+        segments:
+          - "{time_lead}"
+          - "{time_reference}"
+          - "{request_prefix} {action}"
+          - "{object}"
+          - "{request_suffix}"
+      - template_id: validation-location-first
+        topic: location_update
+        segments:
+          - "At {location}"
+          - "{status_prefix} {state}"
+          - "{statement_suffix}"
+
+  test:
+    count_per_profile: 250
+    templates:
+      - template_id: test-soft-request
+        topic: indirect_request
+        segments:
+          - "{soft_request_prefix} {action}"
+          - "{object}"
+          - "before {time_reference}"
+          - "{request_suffix}"
+      - template_id: test-preference-choice
+        topic: preference_choice
+        segments:
+          - "{preference_prefix}"
+          - "{option}"
+          - "{preference_suffix}"
+      - template_id: test-clarification
+        topic: clarification
+        segments:
+          - "{clarify_prefix}"
+          - "{object}"
+          - "or {option}"
+          - "{question_suffix}"

@@ -1,0 +1,25 @@
+schema_version: "1.0"
+policy_revision: transparent-fusion-v1
+
+weights:
+  neural: 0.65
+  generic_language: 0.15
+  personalization: 0.08
+  retrieval: 0.12
+  risk_penalty: 0.35
+  maximum_diversity_penalty: 0.08
+
+minimum_neural_top_support: 0.45
+minimum_neural_margin: 0.10
+minimum_fused_top_score: 0.25
+minimum_fused_margin: 0.03
+lm_dominance_ratio: 1.0
+
+elevated_risk_tags:
+  - personal-data
+  - sensitive
+high_risk_tags:
+  - medical
+  - financial
+  - legal
+  - consent

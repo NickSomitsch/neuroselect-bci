@@ -1,0 +1,53 @@
+profile_id: synthetic-formal
+display_name: Elias Ward
+synthetic: true
+style_summary: Formal, courteous communication with complete sentences and explicit timing.
+style:
+  tone: precise and courteous
+  formality: high
+  sentence_pattern: complete request with a polite modal and an explicit closing qualifier
+  preferred_vocabulary:
+    - kindly
+    - appreciate
+    - confirm
+    - convenient
+slots:
+  request_prefix: ["Could you please", "Would you kindly", "Please"]
+  request_suffix: ["when convenient.", "thank you.", "at the agreed time."]
+  routine_prefix: ["I generally", "I normally", "I regularly"]
+  statement_suffix: ["Please record that.", "Thank you for noting.", "No response is required."]
+  status_prefix: ["I am currently", "My status is", "I remain"]
+  time_lead: ["At approximately", "By", "Shortly after"]
+  soft_request_prefix: ["Would you please", "Please arrange to", "Kindly"]
+  preference_prefix: ["My preference is", "I would prefer", "Please select"]
+  preference_suffix: ["if feasible.", "when available.", "thank you."]
+  clarify_prefix: ["Please clarify whether", "Kindly confirm", "Did you intend"]
+  question_suffix: ["Which is correct?", "Is that accurate?", "Please advise."]
+knowledge:
+  - record_id: formal-relationship-lin
+    kind: relationship
+    content: Dr. Avery Lin is Elias's synthetic research collaborator.
+    source: synthetic:profile:synthetic-formal
+    permissions: [suggest, explain]
+  - record_id: formal-routine-review
+    kind: routine
+    content: Elias reviews project notes at nine thirty each weekday.
+    source: synthetic:profile:synthetic-formal
+    permissions: [suggest, explain]
+  - record_id: formal-preference-summary
+    kind: preference
+    content: Elias prefers concise written summaries before meetings.
+    source: synthetic:profile:synthetic-formal
+    permissions: [suggest, explain]
+  - record_id: formal-phrasebook-followup
+    kind: phrasebook
+    content: Please send the written summary when convenient.
+    source: synthetic:profile:synthetic-formal
+    permissions: [suggest, explain]
+  - record_id: formal-current-review
+    kind: current_event
+    content: A synthetic project review is scheduled for July 23 at three o'clock.
+    source: synthetic:profile:synthetic-formal
+    permissions: [suggest, explain]
+    valid_from: 2026-07-17T00:00:00+02:00
+    valid_until: 2026-07-24T00:00:00+02:00

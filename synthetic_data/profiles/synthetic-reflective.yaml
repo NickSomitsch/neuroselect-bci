@@ -1,0 +1,53 @@
+profile_id: synthetic-reflective
+display_name: Noor Bell
+synthetic: true
+style_summary: Thoughtful, measured communication that states preferences and asks for clarification.
+style:
+  tone: reflective and measured
+  formality: medium
+  sentence_pattern: calm request or observation followed by a reasoned qualifier
+  preferred_vocabulary:
+    - consider
+    - prefer
+    - perhaps
+    - clarify
+slots:
+  request_prefix: ["Would you", "Could we", "Please"]
+  request_suffix: ["when it suits.", "after considering it.", "at a steady pace."]
+  routine_prefix: ["I often", "I usually", "I regularly"]
+  statement_suffix: ["That feels appropriate.", "I would keep that.", "This seems suitable."]
+  status_prefix: ["I currently feel", "I seem", "I remain"]
+  time_lead: ["Sometime around", "By", "Shortly before"]
+  soft_request_prefix: ["Could you perhaps", "Please try to", "Would you"]
+  preference_prefix: ["On reflection, I prefer", "I would lean toward", "Please consider"]
+  preference_suffix: ["for this situation.", "as the calmer choice.", "if possible."]
+  clarify_prefix: ["Could you clarify", "Did you mean", "Let us distinguish"]
+  question_suffix: ["Which seems better?", "Is that correct?", "Could you clarify?"]
+knowledge:
+  - record_id: reflective-relationship-noor
+    kind: relationship
+    content: Priya Bell is Noor's synthetic cousin and weekly conversation partner.
+    source: synthetic:profile:synthetic-reflective
+    permissions: [suggest, explain]
+  - record_id: reflective-routine-journal
+    kind: routine
+    content: Noor reviews a short journal entry before dinner.
+    source: synthetic:profile:synthetic-reflective
+    permissions: [suggest, explain]
+  - record_id: reflective-preference-pace
+    kind: preference
+    content: Noor prefers a slower pace and a quiet room for complex discussions.
+    source: synthetic:profile:synthetic-reflective
+    permissions: [suggest, explain]
+  - record_id: reflective-phrasebook-pause
+    kind: phrasebook
+    content: I would like a moment to consider that.
+    source: synthetic:profile:synthetic-reflective
+    permissions: [suggest, explain]
+  - record_id: reflective-current-call
+    kind: current_event
+    content: A synthetic call with Priya is planned for July 22 in the early afternoon.
+    source: synthetic:profile:synthetic-reflective
+    permissions: [suggest, explain]
+    valid_from: 2026-07-17T00:00:00+02:00
+    valid_until: 2026-07-23T00:00:00+02:00

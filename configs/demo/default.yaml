@@ -1,0 +1,14 @@
+runtime:
+  environment: development
+  artifacts_dir: artifacts
+  results_dir: results
+  deterministic: true
+service:
+  host: 127.0.0.1
+  port: 8000
+session_policy:
+  candidate_count: 8
+  maximum_phrase_tokens: 4
+  minimum_neural_weight: 0.65
+  maximum_non_neural_weight: 0.35
+  final_confirmation_required: true

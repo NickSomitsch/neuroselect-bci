@@ -1,0 +1,9 @@
+model_id: Qwen/Qwen3-4B-MLX-4bit
+backend: mlx-lm
+license: Apache-2.0
+revision: null
+download_enabled: false
+generation:
+  enable_thinking: false
+  temperature: 0.0
+  maximum_phrase_tokens: 4

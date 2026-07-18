@@ -1,0 +1,11 @@
+dataset_id: bigp3bci-study-p
+source_version: "1.0.0"
+moabb_class: Mainsah2025_P
+source_url: https://physionet.org/content/bigp3bci/1.0.0/
+license: CC-BY-4.0
+paradigm: p300
+subjects: 19
+sessions: 2
+channels: 32
+sampling_rate_hz: 256
+download_enabled: false

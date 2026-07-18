@@ -1,0 +1,53 @@
+profile_id: synthetic-concise
+display_name: Mara Vale
+synthetic: true
+style_summary: Direct, concise requests with short acknowledgments and little ornamentation.
+style:
+  tone: calm and direct
+  formality: medium
+  sentence_pattern: short request or status statement followed by a clear qualifier
+  preferred_vocabulary:
+    - please
+    - now
+    - ready
+    - confirm
+slots:
+  request_prefix: ["Please", "Kindly", "Could you"]
+  request_suffix: ["now.", "please.", "when ready."]
+  routine_prefix: ["I usually", "I often", "I routinely"]
+  statement_suffix: ["That is all.", "Please note this.", "No change needed."]
+  status_prefix: ["I am", "I feel", "I remain"]
+  time_lead: ["At", "Around", "By"]
+  soft_request_prefix: ["Please remember to", "Could you", "Please"]
+  preference_prefix: ["I prefer", "My choice is", "I would choose"]
+  preference_suffix: ["for now.", "if available.", "please."]
+  clarify_prefix: ["Did you mean", "Was it", "Please confirm"]
+  question_suffix: ["Which one?", "Is that right?", "Please clarify."]
+knowledge:
+  - record_id: concise-relationship-anna
+    kind: relationship
+    content: Anna Vale is Mara's sister and preferred emergency contact.
+    source: synthetic:profile:synthetic-concise
+    permissions: [suggest, explain]
+  - record_id: concise-routine-morning
+    kind: routine
+    content: Mara reviews the wall calendar after breakfast.
+    source: synthetic:profile:synthetic-concise
+    permissions: [suggest, explain]
+  - record_id: concise-preference-drink
+    kind: preference
+    content: Mara prefers still water at room temperature.
+    source: synthetic:profile:synthetic-concise
+    permissions: [suggest, explain]
+  - record_id: concise-phrasebook-break
+    kind: phrasebook
+    content: I need a quiet break now.
+    source: synthetic:profile:synthetic-concise
+    permissions: [suggest, explain]
+  - record_id: concise-current-delivery
+    kind: current_event
+    content: A synthetic parcel is expected at the front desk on July 20.
+    source: synthetic:profile:synthetic-concise
+    permissions: [suggest, explain]
+    valid_from: 2026-07-17T00:00:00+02:00
+    valid_until: 2026-07-21T00:00:00+02:00

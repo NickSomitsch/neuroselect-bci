@@ -1,0 +1,7 @@
+seed: 20260717
+target_concentration: 18.0
+distractor_concentration: 1.0
+ambiguous_concentration: 10.0
+lapse_probability: 0.08
+ambiguous_probability: 0.12
+timeline_origin: 2026-01-01T00:00:00Z

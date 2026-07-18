@@ -1,0 +1,10 @@
+name: deterministic-smoke
+run_kind: simulation
+seed: 20260717
+profile_ids:
+  - synthetic-concise
+message_limit: 2
+subject_limit: 1
+candidate_backend: fixture
+neural_backend: seeded-simulator
+write_full_prompts: false

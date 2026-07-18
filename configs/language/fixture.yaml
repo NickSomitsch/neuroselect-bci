@@ -1,0 +1,39 @@
+schema_version: "1.0"
+backend_id: deterministic-fixture
+model_id: neuroselect/fixture-candidates
+model_revision: fixture-corpus-v1
+generator_revision: deterministic-generator-v1
+prompt_revision: structured-next-span-v1
+deterministic: true
+
+default_candidates:
+  - { text: "Please", support: 0.22 }
+  - { text: "Thank you", support: 0.18 }
+  - { text: "Could you", support: 0.16 }
+  - { text: "I need", support: 0.13 }
+  - { text: "Yes", support: 0.10 }
+  - { text: "No", support: 0.08 }
+  - { text: "Hello", support: 0.06 }
+  - { text: "One moment", support: 0.04 }
+  - { text: "I am ready", support: 0.03 }
+  - { text: "Okay", support: 0.025 }
+  - { text: "Maybe", support: 0.020 }
+  - { text: "Help", support: 0.015 }
+  - { text: "Ready", support: 0.010 }
+  - { text: "Wait", support: 0.005 }
+
+rules:
+  - suffix: "could you"
+    candidates:
+      - { text: "please help", support: 0.30 }
+      - { text: "bring my notebook", support: 0.24 }
+      - { text: "open the window", support: 0.18 }
+      - { text: "check the schedule", support: 0.15 }
+      - { text: "wait a moment", support: 0.13 }
+  - suffix: "I would like"
+    candidates:
+      - { text: "some water", support: 0.29 }
+      - { text: "to rest", support: 0.24 }
+      - { text: "the quieter option", support: 0.19 }
+      - { text: "to call home", support: 0.16 }
+      - { text: "a short break", support: 0.12 }

@@ -1,0 +1,6 @@
+schema_version: "1.0"
+tokenizer_revision: unicode-lexical-v1
+injection_detector_revision: conservative-patterns-v1
+minimum_score: 0.08
+default_top_k: 3
+maximum_top_k: 10

@@ -1,0 +1,28 @@
+.DS_Store
+.coverage
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+__pycache__/
+*.egg-info/
+dist/
+htmlcov/
+
+# Local research artifacts and downloaded data/models.
+/artifacts/
+/data/
+/models/
+/results/*
+!/results/reference/
+!/results/reference/.gitkeep
+
+# Frontend artifacts.
+ui/node_modules/
+ui/dist/
+ui/coverage/
+
+# Environment overrides and secrets.
+.env
+.env.*
+!.env.example
