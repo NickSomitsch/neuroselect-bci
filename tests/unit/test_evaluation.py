@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+import torch
 from pydantic import ValidationError
 
 from neuroselect.bci import SimulationConfig
@@ -14,6 +15,7 @@ from neuroselect.evaluation import (
     ExperimentConfigurationError,
     SimulatedExperimentRunner,
     SimulatedExperimentSpec,
+    capture_runtime_environment,
     condition_catalog,
     load_experiment_spec,
     write_experiment_artifacts,
@@ -64,6 +66,16 @@ def make_spec(
 
 def run_spec(spec: SimulatedExperimentSpec):  # type: ignore[no-untyped-def]
     return SimulatedExperimentRunner(spec).run(benchmark=BENCHMARK, profiles=PROFILES)
+
+
+def test_runtime_environment_preserves_torch_build_version(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(torch, "__version__", "2.13.0+cu130")
+
+    package_versions, _ = capture_runtime_environment()
+
+    assert package_versions["torch"] == "2.13.0+cu130"
 
 
 def test_condition_catalog_keeps_unimplemented_lora_and_complete_runs_unavailable() -> None:

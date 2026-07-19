@@ -25,6 +25,8 @@ def _sha256(content: str) -> str:
 def capture_runtime_environment() -> tuple[dict[str, str], dict[str, str]]:
     """Capture the software and host identifiers needed to interpret a result."""
 
+    import torch
+
     package_versions = {
         "python": platform.python_version(),
         **{
@@ -39,9 +41,10 @@ def capture_runtime_environment() -> tuple[dict[str, str], dict[str, str]]:
                 "pyyaml",
                 "scikit-learn",
                 "scipy",
-                "torch",
             )
         },
+        # PyTorch adds build details such as the CUDA version to its runtime version.
+        "torch": str(torch.__version__),
     }
     device = {
         "system": platform.system(),
