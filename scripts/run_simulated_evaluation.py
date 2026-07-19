@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("artifacts/evaluation/simulated-vertical-slice-v1"),
+        default=Path("artifacts/evaluation/simulated-vertical-slice-v2"),
         help="Ignored destination for JSON, JSONL, and checksum artifacts.",
     )
     return parser.parse_args()

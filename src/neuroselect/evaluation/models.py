@@ -35,6 +35,7 @@ class EvaluationCondition(StrEnum):
     ABLATION_SHUFFLED_RETRIEVAL = "ablation_shuffled_retrieval"
     ABLATION_IRRELEVANT_RETRIEVAL = "ablation_irrelevant_retrieval"
     ABLATION_REMOVE_CONTEXT = "ablation_remove_context"
+    ABLATION_REMOVE_RETRIEVAL_CONTEXT = "ablation_remove_retrieval_context"
 
 
 class ConditionFamily(StrEnum):
@@ -108,7 +109,7 @@ class SimulatedExperimentSpec(BaseModel):
 
     schema_version: Literal["1.0"]
     experiment_id: Identifier
-    protocol_revision: Identifier = "controlled-fusion-evaluation-v1"
+    protocol_revision: Identifier = "controlled-fusion-evaluation-v2"
     seed: int = Field(ge=0)
     split: BenchmarkSplit = BenchmarkSplit.TEST
     profile_ids: tuple[Identifier, ...] = Field(min_length=1)
@@ -158,6 +159,7 @@ class TrialRecord(BaseModel):
     span_index: int = Field(ge=0)
     message_span_count: int = Field(ge=1)
     confirmed_context: str = Field(max_length=4_000)
+    retrieval_query_context_removed: bool = False
     target_text: str = Field(min_length=1, max_length=160)
     target_word_count: int = Field(ge=1, le=8)
     candidate_ids: tuple[Identifier, ...] = Field(min_length=4)
@@ -270,7 +272,7 @@ class ExperimentResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.1"] = "1.1"
     run_id: Identifier
     generated_at: datetime
     config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")

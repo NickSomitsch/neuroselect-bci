@@ -90,6 +90,7 @@ export interface SessionView {
       prompt_revision: string;
       deterministic: boolean;
     };
+    risk_policy_revision: string;
     diagnostics: {
       raw_proposal_count: number;
       selected_language_count: number;

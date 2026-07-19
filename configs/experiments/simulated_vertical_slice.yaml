@@ -1,6 +1,6 @@
 schema_version: "1.0"
-experiment_id: simulated-vertical-slice-v1
-protocol_revision: controlled-fusion-evaluation-v1
+experiment_id: simulated-vertical-slice-v2
+protocol_revision: controlled-fusion-evaluation-v2
 seed: 20260717
 split: test
 profile_ids:
@@ -22,7 +22,7 @@ conditions:
   - ablation_remove_rag
   - ablation_shuffled_retrieval
   - ablation_irrelevant_retrieval
-  - ablation_remove_context
+  - ablation_remove_retrieval_context
 calibration_bins: 10
 language_conflict_every_n_trials: 4
 evaluation_time: 2026-07-18T12:00:00Z

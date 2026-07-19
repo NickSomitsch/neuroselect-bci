@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-18
+- Protocol revision: `controlled-fusion-evaluation-v2`
 
 ## Context
 
@@ -33,11 +34,14 @@ includes:
 - current transparent fusion with repeat and abstention;
 - uniform and deterministically shuffled neural evidence;
 - removed, shuffled, and deliberately irrelevant retrieval evidence; and
-- removed confirmed conversation context.
+- removed confirmed context from retrieval queries.
 
-The planned D, E, and F conditions remain in the machine-readable catalog but are unavailable.
-They require a real held-out LoRA evaluation and, for F, a calibrated P300 decoder. The runner
-rejects configurations that request an unavailable condition.
+The planned D, E, F, and full confirmed-conversation-context removal conditions remain in the
+machine-readable catalog but are unavailable. D and E require a real held-out LoRA evaluation;
+F also requires a calibrated P300 decoder. Full context removal requires a context-sensitive
+language backend: with the current controlled backend, it would change retrieval only and would
+therefore be a mislabeled proxy. The runner rejects configurations that request any unavailable
+condition.
 
 Every fourth controlled trial creates a language conflict by making a distractor linguistically
 most likely while preserving the intended option. The system still forbids automatic selection,
@@ -63,7 +67,8 @@ probability transformations, a fixed evaluation time, and canonical JSON seriali
 
 - `trials.jsonl` with one auditable record per condition and target span;
 - `metrics.json` with the condition catalog, aggregate metrics, assumptions, and result digest; and
-- `manifest.json` with Git/config/data/protocol identifiers and output checksums.
+- `manifest.json` with Git/config/data/protocol identifiers, ranking and risk-policy checksums,
+  package versions, device identifiers, and output checksums.
 
 Identical source inputs, configuration, and Git revision produce byte-identical artifacts in
 different output directories. When the working tree is dirty, the manifest records a digest over

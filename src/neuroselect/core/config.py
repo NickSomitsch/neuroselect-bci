@@ -49,16 +49,8 @@ class SessionPolicyConfig(BaseModel):
 
     candidate_count: Literal[4, 6, 8, 12] = 8
     maximum_phrase_tokens: int = Field(default=4, ge=1, le=8)
-    minimum_neural_weight: float = Field(default=0.65, ge=0.5, le=1.0)
-    maximum_non_neural_weight: float = Field(default=0.35, ge=0.0, le=0.5)
     final_confirmation_required: Literal[True] = True
     finalization_confirmation_ttl_seconds: int = Field(default=300, ge=60, le=900)
-
-    @model_validator(mode="after")
-    def enforce_evidence_cap(self) -> SessionPolicyConfig:
-        if self.minimum_neural_weight + self.maximum_non_neural_weight > 1.0 + 1e-9:
-            raise ValueError("neural floor plus non-neural cap cannot exceed one")
-        return self
 
 
 class AppConfig(BaseModel):

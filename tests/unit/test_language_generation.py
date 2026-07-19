@@ -14,15 +14,19 @@ from neuroselect.language import (
     CandidateGenerationResult,
     CandidateGenerator,
     CandidateProposal,
+    CandidateRiskPolicy,
+    CandidateRiskTagger,
     ControlPath,
     FixtureBackendConfig,
     FixtureCandidateBackend,
     ProposalRejectionReason,
+    load_candidate_risk_policy,
     load_fixture_backend_config,
     parse_structured_proposals,
 )
 
 FIXTURE_CONFIG_PATH = Path(__file__).parents[2] / "configs" / "language" / "fixture.yaml"
+RISK_CONFIG_PATH = Path(__file__).parents[2] / "configs" / "language" / "risk.yaml"
 STUB_METADATA = BackendMetadata(
     backend_id="test-backend",
     model_id="test-model",
@@ -151,6 +155,45 @@ def test_zero_backend_support_becomes_uniform_without_claiming_calibration() -> 
     result = CandidateGenerator(backend).generate(CandidateGenerationRequest(candidate_count=6))
 
     assert tuple(result.generic_language_support.values()) == pytest.approx((1 / 3, 1 / 3, 1 / 3))
+
+
+def test_trusted_policy_tags_sensitive_candidates_after_generation() -> None:
+    backend = StubBackend(
+        (
+            proposal("Please call my doctor", 0.6),
+            proposal("Transfer the money", 0.3),
+            proposal("Have a nice day", 0.1),
+        )
+    )
+    result = CandidateGenerator(backend).generate(
+        CandidateGenerationRequest(candidate_count=6)
+    )
+    candidates = {candidate.text: candidate for candidate in result.candidate_set.candidates}
+
+    assert result.risk_policy_revision == "conservative-sensitive-content-v1"
+    assert candidates["Please call my doctor"].risk_tags == frozenset({"medical"})
+    assert candidates["Transfer the money"].risk_tags == frozenset({"financial"})
+    assert candidates["Have a nice day"].risk_tags == frozenset()
+    assert "risk-policy:conservative-sensitive-content-v1" in candidates[
+        "Please call my doctor"
+    ].origins
+
+
+def test_risk_policy_configuration_is_strict_and_versioned(tmp_path: Path) -> None:
+    policy = load_candidate_risk_policy(RISK_CONFIG_PATH)
+    assert CandidateRiskTagger(policy).tag("share my passport") == frozenset(
+        {"personal-data"}
+    )
+
+    payload = policy.model_dump(mode="json")
+    payload["rules"] = [payload["rules"][0], payload["rules"][0]]
+    with pytest.raises(ValidationError, match="tags must be unique"):
+        CandidateRiskPolicy.model_validate(payload)
+
+    invalid = tmp_path / "invalid-risk.yaml"
+    invalid.write_text("- not\n- a\n- mapping\n")
+    with pytest.raises(ValueError, match="YAML mapping"):
+        load_candidate_risk_policy(invalid)
 
 
 def test_generation_fails_closed_when_safe_unique_output_is_insufficient() -> None:

@@ -8,10 +8,9 @@ import pytest
 from neuroselect.bci import SeededNeuralSimulator, SimulationConfig
 from neuroselect.core.models import FinalizationRequest, SelectionActionType, SessionState
 from neuroselect.language import (
-    CandidateGenerationRequest,
-    CandidateGenerationResult,
     CandidateGenerator,
     FixtureCandidateBackend,
+    load_fixture_backend_config,
 )
 from neuroselect.orchestration import (
     CreateSessionRequest,
@@ -46,19 +45,14 @@ class MutableClock:
 
 class RiskCandidateGenerator(CandidateGenerator):
     def __init__(self) -> None:
-        super().__init__(FixtureCandidateBackend())
-
-    def generate(self, request: CandidateGenerationRequest) -> CandidateGenerationResult:
-        result = super().generate(request)
-        candidates = list(result.candidate_set.candidates)
-        candidates[0] = candidates[0].model_copy(update={"risk_tags": frozenset({"medical"})})
-        return result.model_copy(
-            update={
-                "candidate_set": result.candidate_set.model_copy(
-                    update={"candidates": tuple(candidates)}
-                )
-            }
+        config = load_fixture_backend_config()
+        sensitive = config.default_candidates[0].model_copy(
+            update={"text": "medical help"}
         )
+        configured = config.model_copy(
+            update={"default_candidates": (sensitive, *config.default_candidates[1:])}
+        )
+        super().__init__(FixtureCandidateBackend(configured))
 
 
 def make_service(
@@ -349,7 +343,7 @@ def test_finalization_nonce_hash_expiry_rejection_and_one_time_confirmation(
     rejected = service.reject_finalization(session_id)
     assert rejected.session.state is SessionState.DRAFT
     challenge = service.request_finalization(session_id)
-    clock.advance(timedelta(minutes=6))
+    clock.advance(timedelta(minutes=5))
     with pytest.raises(SessionConflictError, match="expired"):
         service.confirm_finalization(
             session_id,
@@ -385,6 +379,91 @@ def test_finalization_nonce_hash_expiry_rejection_and_one_time_confirmation(
                 explicit_confirmation=True,
             ),
         )
+
+
+def test_unsafe_finalization_nonce_does_not_change_session_state(
+    service_bundle: tuple[SessionOrchestrator, MutableClock],
+) -> None:
+    service, _ = service_bundle
+    session_id = create(service, SessionInputMode.MANUAL)
+    service.append_manual_text(
+        session_id,
+        ManualTextRequest(text="Keep this draft", explicit_confirmation=True),
+    )
+    before = service.get_session(session_id)
+    service.nonce_factory = lambda: "too-short"
+
+    with pytest.raises(SessionValidationError, match="unsafe nonce"):
+        service.request_finalization(session_id)
+    assert service.get_session(session_id) == before
+
+
+def test_rejected_actions_cannot_mutate_pending_or_finalized_text(
+    service_bundle: tuple[SessionOrchestrator, MutableClock],
+) -> None:
+    service, _ = service_bundle
+    session_id = create(service, SessionInputMode.MANUAL)
+    service.append_manual_text(
+        session_id,
+        ManualTextRequest(text="Exact approved text", explicit_confirmation=True),
+    )
+    challenge = service.request_finalization(session_id)
+    pending = service.get_session(session_id)
+
+    for action in (
+        SelectionActionType.BACK,
+        SelectionActionType.CLEAR,
+        SelectionActionType.OTHER,
+    ):
+        with pytest.raises(SessionConflictError):
+            service.apply_action(session_id, SessionActionRequest(action=action))
+        assert service.get_session(session_id) == pending
+
+    finalized = service.confirm_finalization(
+        session_id,
+        FinalizationRequest(
+            session_id=session_id,
+            text_sha256=challenge.text_sha256,
+            confirmation_nonce=challenge.confirmation_nonce,
+            explicit_confirmation=True,
+        ),
+    )
+    for action in (
+        SelectionActionType.BACK,
+        SelectionActionType.CLEAR,
+        SelectionActionType.CANCEL,
+    ):
+        with pytest.raises(SessionConflictError):
+            service.apply_action(session_id, SessionActionRequest(action=action))
+        assert service.get_session(session_id) == finalized
+
+
+def test_finalization_recomputes_the_current_message_hash(
+    service_bundle: tuple[SessionOrchestrator, MutableClock],
+) -> None:
+    service, _ = service_bundle
+    session_id = create(service, SessionInputMode.MANUAL)
+    service.append_manual_text(
+        session_id,
+        ManualTextRequest(text="Challenge-bound text", explicit_confirmation=True),
+    )
+    challenge = service.request_finalization(session_id)
+    runtime = service._sessions[session_id]
+    runtime.session.confirmed_spans[0] = runtime.session.confirmed_spans[0].model_copy(
+        update={"text": "Unexpected replacement"}
+    )
+
+    with pytest.raises(SessionValidationError, match="text hash"):
+        service.confirm_finalization(
+            session_id,
+            FinalizationRequest(
+                session_id=session_id,
+                text_sha256=challenge.text_sha256,
+                confirmation_nonce=challenge.confirmation_nonce,
+                explicit_confirmation=True,
+            ),
+        )
+    assert service.get_session(session_id).session.state is SessionState.AWAITING_FINAL_CONFIRMATION
 
 
 def test_high_risk_selection_requires_two_selection_steps_and_final_acknowledgement() -> None:

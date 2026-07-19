@@ -79,11 +79,14 @@ def test_condition_catalog_keeps_unimplemented_lora_and_complete_runs_unavailabl
         EvaluationCondition.D_NEURAL_PERSONALIZED,
         EvaluationCondition.E_NEURAL_PERSONALIZED_RAG,
         EvaluationCondition.F_COMPLETE_SYSTEM,
+        EvaluationCondition.ABLATION_REMOVE_CONTEXT,
     }
     assert all(unavailable.values())
 
     with pytest.raises(ExperimentConfigurationError, match="unmet dependencies"):
         run_spec(make_spec(EvaluationCondition.F_COMPLETE_SYSTEM))
+    with pytest.raises(ExperimentConfigurationError, match="context-sensitive language"):
+        run_spec(make_spec(EvaluationCondition.ABLATION_REMOVE_CONTEXT))
 
 
 def test_spec_rejects_duplicate_conditions_profiles_naive_time_and_seed_drift() -> None:
@@ -117,7 +120,7 @@ def test_paired_trials_are_deterministic_held_out_and_leak_free() -> None:
         EvaluationCondition.A_BCI_ONLY,
         EvaluationCondition.B_GENERIC_LANGUAGE_ONLY,
         EvaluationCondition.CURRENT_SAFE_FUSION,
-        EvaluationCondition.ABLATION_REMOVE_CONTEXT,
+        EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT,
     )
     spec = make_spec(*conditions, profile_ids=("synthetic-casual", "synthetic-concise"))
     first = run_spec(spec)
@@ -141,10 +144,10 @@ def test_paired_trials_are_deterministic_held_out_and_leak_free() -> None:
     for record in first.trial_records:
         message = test_messages[record.message_id]
         expected_context = " ".join(message.target_spans[: record.span_index])
-        if record.condition is EvaluationCondition.ABLATION_REMOVE_CONTEXT:
-            assert record.confirmed_context == ""
-        else:
-            assert record.confirmed_context == expected_context
+        assert record.confirmed_context == expected_context
+        assert record.retrieval_query_context_removed is (
+            record.condition is EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT
+        )
 
 
 def test_language_conflict_keeps_target_visible_and_neural_evidence_decisive() -> None:
@@ -203,7 +206,7 @@ def test_retrieval_ablations_are_explicit_and_profile_scoped() -> None:
         EvaluationCondition.ABLATION_REMOVE_RAG,
         EvaluationCondition.ABLATION_SHUFFLED_RETRIEVAL,
         EvaluationCondition.ABLATION_IRRELEVANT_RETRIEVAL,
-        EvaluationCondition.ABLATION_REMOVE_CONTEXT,
+        EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT,
     )
     result = run_spec(spec)
     by_condition = {
@@ -220,8 +223,10 @@ def test_retrieval_ablations_are_explicit_and_profile_scoped() -> None:
         for record in by_condition[EvaluationCondition.ABLATION_IRRELEVANT_RETRIEVAL]
     )
     assert all(
-        record.confirmed_context == ""
-        for record in by_condition[EvaluationCondition.ABLATION_REMOVE_CONTEXT]
+        record.retrieval_query_context_removed
+        for record in by_condition[
+            EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT
+        ]
     )
     assert all(metric.unintended_word_rate == 0 for metric in result.metrics)
     assert all(metric.automatic_selection_violation_count == 0 for metric in result.metrics)
@@ -268,6 +273,16 @@ def test_artifacts_are_byte_stable_and_manifest_checksums_match(tmp_path: Path) 
     for filename in ("trials.jsonl", "metrics.json", "manifest.json"):
         assert (first_dir / filename).read_bytes() == (second_dir / filename).read_bytes()
     assert first_manifest == second_manifest
+    assert first_manifest.package_versions["python"]
+    assert first_manifest.package_versions["neuroselect-bci"] == "0.1.0.dev0"
+    assert first_manifest.device["system"]
+    assert first_manifest.device["machine"]
+    assert {model.artifact_id for model in first_manifest.models} == {
+        "seeded-neural-simulator",
+        "controlled-candidate-protocol",
+        "candidate-risk-policy",
+        "transparent-ranking-policy",
+    }
     assert len((first_dir / "trials.jsonl").read_text().splitlines()) == len(result.trial_records)
     summary = json.loads((first_dir / "metrics.json").read_text())
     assert "trial_records" not in summary

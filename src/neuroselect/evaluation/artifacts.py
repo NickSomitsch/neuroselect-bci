@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
+from importlib.metadata import version
 from pathlib import Path
 
 from neuroselect.evaluation.models import ExperimentResult
+from neuroselect.language import load_candidate_risk_policy
 from neuroselect.provenance import ArtifactRef, RunKind, RunManifest, RunStatus
+from neuroselect.ranking import load_ranking_policy
 
 
 def _canonical_json(payload: object) -> str:
@@ -18,12 +22,40 @@ def _sha256(content: str) -> str:
     return hashlib.sha256(content.encode()).hexdigest()
 
 
+def capture_runtime_environment() -> tuple[dict[str, str], dict[str, str]]:
+    """Capture the software and host identifiers needed to interpret a result."""
+
+    package_versions = {
+        "python": platform.python_version(),
+        **{
+            package: version(package)
+            for package in (
+                "neuroselect-bci",
+                "fastapi",
+                "mne",
+                "numpy",
+                "pydantic",
+                "pyyaml",
+            )
+        },
+    }
+    device = {
+        "system": platform.system(),
+        "release": platform.release(),
+        "machine": platform.machine(),
+        "processor": platform.processor() or "unknown",
+    }
+    return package_versions, device
+
+
 def write_experiment_artifacts(
     result: ExperimentResult,
     output_dir: str | Path,
     *,
     git_sha: str,
     source_tree_sha256: str | None = None,
+    package_versions: dict[str, str] | None = None,
+    device: dict[str, str] | None = None,
 ) -> RunManifest:
     """Write byte-stable trials, summary, and manifest files."""
 
@@ -46,7 +78,12 @@ def write_experiment_artifacts(
     trials_path.write_text(trials_content, encoding="utf-8")
     summary_path.write_text(summary_content, encoding="utf-8")
 
+    captured_packages, captured_device = capture_runtime_environment()
     simulator_config = _canonical_json(result.spec.simulator.model_dump(mode="json"))
+    risk_policy = load_candidate_risk_policy()
+    risk_policy_config = _canonical_json(risk_policy.model_dump(mode="json"))
+    ranking_policy = load_ranking_policy()
+    ranking_policy_config = _canonical_json(ranking_policy.model_dump(mode="json"))
     manifest = RunManifest(
         run_id=result.run_id,
         run_kind=RunKind.SIMULATION,
@@ -56,6 +93,10 @@ def write_experiment_artifacts(
         git_sha=git_sha,
         config_sha256=result.config_sha256,
         random_seeds={"global": result.spec.seed, "neural_simulator": result.spec.seed},
+        package_versions=(
+            captured_packages if package_versions is None else package_versions
+        ),
+        device=captured_device if device is None else device,
         datasets=(
             ArtifactRef(
                 artifact_id="synthetic-held-out-benchmark",
@@ -77,6 +118,18 @@ def write_experiment_artifacts(
                 uri="protocol://controlled-target-presence",
                 sha256=_sha256("controlled-target-presence-v1"),
                 revision="controlled-proposals-v1",
+            ),
+            ArtifactRef(
+                artifact_id="candidate-risk-policy",
+                uri="config://language/risk",
+                sha256=_sha256(risk_policy_config),
+                revision=risk_policy.policy_revision,
+            ),
+            ArtifactRef(
+                artifact_id="transparent-ranking-policy",
+                uri="config://ranking",
+                sha256=_sha256(ranking_policy_config),
+                revision=ranking_policy.policy_revision,
             ),
         ),
         outputs=(

@@ -15,7 +15,8 @@ synthetic evaluation assets:
 - Four explicitly synthetic personas with permissioned, expiring knowledge records.
 - A deterministic held-out message benchmark with 5,600 generated messages.
 - A seeded, call-order-independent neural probability simulator.
-- A structured deterministic candidate generator with deduplication and explicit controls.
+- A structured deterministic candidate generator with deduplication, explicit controls, and an
+  application-owned versioned lexical risk policy.
 - A local SQLite personal-knowledge store with safe lexical retrieval and provenance.
 - A transparent fusion ranker with LM-dominance, repeat, abstention, and risk safeguards.
 - A loopback session API with manual/simulated rounds and explicit confirmation boundaries.
@@ -96,10 +97,12 @@ make simulated-evaluation
 ```
 
 This writes ignored `trials.jsonl`, `metrics.json`, and `manifest.json` artifacts under
-`artifacts/evaluation/simulated-vertical-slice-v1/`. The controlled protocol keeps the intended
+`artifacts/evaluation/simulated-vertical-slice-v2/`. The controlled protocol keeps the intended
 span visible to isolate fusion behavior; it does not measure unconstrained language-generation
 recall or real EEG performance. Planned LoRA and complete calibrated-system conditions are listed
-but cannot run until those components have real held-out implementations.
+but cannot run until those components have real held-out implementations. Full conversation-
+context removal is likewise dependency-gated until a context-sensitive language backend exists;
+the runnable proxy removes confirmed context from retrieval queries and labels that scope exactly.
 
 Review the Study P dataset card and explicitly prepare a one-recording smoke slice with:
 
@@ -130,7 +133,10 @@ for each of four personas. Templates and topics are disjoint across splits, ever
 span is at most four whitespace-delimited tokens, and identical source files produce
 byte-identical artifacts regardless of checkout location.
 
-Research artifacts, downloaded datasets, and model weights belong under the ignored `artifacts/`, `data/`, or `models/` directories. Every future experiment must emit a machine-readable run manifest containing immutable data/model identifiers and checksums.
+Research artifacts, downloaded datasets, and model weights belong under the ignored `artifacts/`,
+`data/`, or `models/` directories. Every experiment must emit a machine-readable run manifest
+containing immutable data/model/policy identifiers and checksums, package versions, and device
+provenance.
 
 ## Research boundaries
 

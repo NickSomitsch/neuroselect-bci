@@ -3,10 +3,18 @@
 from __future__ import annotations
 
 import math
+import re
 from enum import StrEnum
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from neuroselect.core.models import CandidateKind, CandidateSet
 
@@ -73,6 +81,44 @@ class BackendMetadata(BaseModel):
     deterministic: bool
 
 
+class CandidateRiskRule(BaseModel):
+    """Trusted application-owned patterns for one confirmation-policy tag."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    risk_tag: ShortIdentifier
+    patterns: tuple[str, ...] = Field(min_length=1)
+
+    @field_validator("patterns")
+    @classmethod
+    def require_valid_patterns(cls, patterns: tuple[str, ...]) -> tuple[str, ...]:
+        for pattern in patterns:
+            if not pattern:
+                raise ValueError("candidate risk patterns cannot be empty")
+            try:
+                re.compile(pattern, re.IGNORECASE)
+            except re.error as error:
+                raise ValueError(f"invalid candidate risk pattern: {pattern}") from error
+        return patterns
+
+
+class CandidateRiskPolicy(BaseModel):
+    """Versioned conservative policy applied after untrusted model generation."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"]
+    policy_revision: ShortIdentifier
+    rules: tuple[CandidateRiskRule, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def require_unique_tags(self) -> CandidateRiskPolicy:
+        risk_tags = [rule.risk_tag for rule in self.rules]
+        if len(risk_tags) != len(set(risk_tags)):
+            raise ValueError("candidate risk policy tags must be unique")
+        return self
+
+
 class FixtureRule(BaseModel):
     """Suffix-triggered proposals for deterministic development scenarios."""
 
@@ -136,6 +182,7 @@ class CandidateGenerationResult(BaseModel):
     generic_language_support: dict[str, LanguageSupport]
     control_actions: dict[str, ControlPath]
     backend: BackendMetadata
+    risk_policy_revision: ShortIdentifier
     diagnostics: GenerationDiagnostics
 
     @model_validator(mode="after")

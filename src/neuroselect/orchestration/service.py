@@ -139,6 +139,16 @@ class SessionOrchestrator:
         self.simulator = simulator or SeededNeuralSimulator()
         self.ranker = ranker or TransparentRanker()
         self.session_policy = session_policy or SessionPolicyConfig()
+        generated_risk_tags = {
+            rule.risk_tag for rule in self.candidate_generator.risk_tagger.policy.rules
+        }
+        ranked_risk_tags = set(self.ranker.policy.elevated_risk_tags).union(
+            self.ranker.policy.high_risk_tags
+        )
+        if generated_risk_tags != ranked_risk_tags:
+            raise ValueError(
+                "candidate and ranking risk policies must define the same risk tags"
+            )
         self.clock = clock or (lambda: datetime.now(UTC))
         self.session_id_factory = session_id_factory or (lambda: f"session-{uuid.uuid4().hex[:20]}")
         self.nonce_factory = nonce_factory or (lambda: secrets.token_urlsafe(24))
@@ -249,33 +259,37 @@ class SessionOrchestrator:
     def apply_action(self, session_id: str, request: SessionActionRequest) -> SessionView:
         runtime = self._runtime(session_id)
         now = self._now()
+        evidence_id = (
+            runtime.ranking.neural_evidence_id if runtime.ranking is not None else None
+        )
         if request.action is SelectionActionType.CANCEL:
-            self._record_action(runtime, request.action, None, now)
             self._transition(runtime, SessionEvent.CANCEL_SESSION, now)
             self._clear_round(runtime)
+            self._clear_finalization(runtime)
         elif request.action is SelectionActionType.BACK:
-            self._record_action(runtime, request.action, None, now)
             self._back(runtime, now)
         elif request.action is SelectionActionType.CLEAR:
-            self._record_action(runtime, request.action, None, now)
             self._clear(runtime, now)
         elif request.action is SelectionActionType.OTHER:
-            self._record_action(runtime, request.action, None, now)
-            runtime.counters.other_count += 1
             self._return_to_draft(runtime, now)
+            runtime.counters.other_count += 1
         elif request.action is SelectionActionType.REPEAT:
-            self._record_action(runtime, request.action, None, now)
-            return self._repeat(runtime, now)
+            self._repeat(runtime, now)
         elif request.action is SelectionActionType.REJECT:
             assert request.candidate_id is not None
-            self._record_action(runtime, request.action, request.candidate_id, now)
             self._reject(runtime, request.candidate_id, now)
         elif request.action is SelectionActionType.SELECT:
             assert request.candidate_id is not None
-            self._record_action(runtime, request.action, request.candidate_id, now)
             self._select(runtime, request.candidate_id, now)
         else:  # pragma: no cover - validated by SessionActionRequest
             raise SessionValidationError(f"unsupported action: {request.action.value}")
+        self._record_action(
+            runtime,
+            request.action,
+            request.candidate_id,
+            now,
+            evidence_id=evidence_id,
+        )
         return self._view(runtime)
 
     def resolve_selection(
@@ -320,16 +334,15 @@ class SessionOrchestrator:
         if not runtime.session.confirmed_text:
             raise SessionValidationError("cannot finalize an empty message")
         now = self._now()
-        self._transition(runtime, SessionEvent.REQUEST_FINALIZATION, now)
         text = runtime.session.confirmed_text
         text_sha256 = hashlib.sha256(text.encode()).hexdigest()
         nonce = self.nonce_factory()
         if len(nonce) < 16:
-            runtime.session.state = SessionState.DRAFT
             raise SessionValidationError("confirmation nonce factory returned an unsafe nonce")
         expires_at = now + timedelta(
             seconds=self.session_policy.finalization_confirmation_ttl_seconds
         )
+        self._transition(runtime, SessionEvent.REQUEST_FINALIZATION, now)
         runtime.finalization_nonce = nonce
         runtime.finalization_sha256 = text_sha256
         runtime.finalization_expires_at = expires_at
@@ -349,13 +362,18 @@ class SessionOrchestrator:
             raise SessionConflictError("session is not awaiting final confirmation")
         if request.session_id != session_id:
             raise SessionValidationError("confirmation session ID does not match the path")
-        if runtime.finalization_expires_at is None or now > runtime.finalization_expires_at:
+        if runtime.finalization_expires_at is None or now >= runtime.finalization_expires_at:
             raise SessionConflictError("finalization confirmation has expired")
         if runtime.finalization_nonce is None or not secrets.compare_digest(
             request.confirmation_nonce, runtime.finalization_nonce
         ):
             raise SessionValidationError("invalid finalization confirmation nonce")
-        if request.text_sha256 != runtime.finalization_sha256:
+        current_text_sha256 = hashlib.sha256(runtime.session.confirmed_text.encode()).hexdigest()
+        if (
+            runtime.finalization_sha256 is None
+            or not secrets.compare_digest(current_text_sha256, runtime.finalization_sha256)
+            or not secrets.compare_digest(request.text_sha256, current_text_sha256)
+        ):
             raise SessionValidationError("finalization text hash does not match")
         if runtime.high_risk_action_ids and not request.high_risk_acknowledged:
             raise SessionValidationError("high-risk content acknowledgement is required")
@@ -404,7 +422,7 @@ class SessionOrchestrator:
         )
         return simulated.evidence, simulated
 
-    def _repeat(self, runtime: _SessionRuntime, now: datetime) -> SessionView:
+    def _repeat(self, runtime: _SessionRuntime, now: datetime) -> None:
         if runtime.input_mode is not SessionInputMode.SIMULATION:
             raise SessionConflictError("repeat requires a simulated or future neural input")
         if runtime.session.state is SessionState.CANDIDATES_READY:
@@ -447,7 +465,6 @@ class SessionOrchestrator:
         runtime.counters.round_count += 1
         runtime.counters.repeat_count += 1
         runtime.session.updated_at = now
-        return self._view(runtime)
 
     def _select(self, runtime: _SessionRuntime, candidate_id: str, now: datetime) -> None:
         if runtime.session.state is SessionState.CANDIDATES_READY:
@@ -540,17 +557,17 @@ class SessionOrchestrator:
         self._transition(runtime, SessionEvent.REJECT_SELECTION, now)
 
     def _back(self, runtime: _SessionRuntime, now: datetime) -> None:
+        self._return_to_draft(runtime, now)
         if runtime.session.confirmed_spans:
             removed = runtime.session.confirmed_spans.pop()
             runtime.high_risk_action_ids.discard(removed.action_id)
         runtime.counters.backtrack_count += 1
-        self._return_to_draft(runtime, now)
 
     def _clear(self, runtime: _SessionRuntime, now: datetime) -> None:
+        self._return_to_draft(runtime, now)
         runtime.session.confirmed_spans.clear()
         runtime.high_risk_action_ids.clear()
         runtime.counters.clear_count += 1
-        self._return_to_draft(runtime, now)
 
     def _return_to_draft(self, runtime: _SessionRuntime, now: datetime) -> None:
         self._transition(runtime, SessionEvent.RETURN_TO_DRAFT, now)
@@ -562,6 +579,8 @@ class SessionOrchestrator:
         action: SelectionActionType,
         candidate_id: str | None,
         now: datetime,
+        *,
+        evidence_id: str | None,
     ) -> None:
         runtime.actions.append(
             SelectionAction(
@@ -572,9 +591,7 @@ class SessionOrchestrator:
                     else EvidenceMode.SIMULATION
                 ),
                 candidate_id=candidate_id,
-                evidence_id=(
-                    runtime.ranking.neural_evidence_id if runtime.ranking is not None else None
-                ),
+                evidence_id=evidence_id,
                 occurred_at=now,
             )
         )
@@ -653,7 +670,9 @@ class SessionOrchestrator:
         return value
 
 
-def build_demo_orchestrator() -> SessionOrchestrator:
+def build_demo_orchestrator(
+    session_policy: SessionPolicyConfig | None = None,
+) -> SessionOrchestrator:
     """Build the local synthetic service without downloading data or model weights."""
 
     profiles = load_profiles()
@@ -666,4 +685,8 @@ def build_demo_orchestrator() -> SessionOrchestrator:
                 record=KnowledgeRecordInput.model_validate(record.model_dump()),
                 at_time=imported_at,
             )
-    return SessionOrchestrator(profiles=profiles, knowledge_store=store)
+    return SessionOrchestrator(
+        profiles=profiles,
+        knowledge_store=store,
+        session_policy=session_policy,
+    )

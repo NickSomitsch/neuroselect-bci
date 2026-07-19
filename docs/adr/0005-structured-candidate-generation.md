@@ -16,9 +16,12 @@
 - Normalize Unicode and whitespace, deduplicate case- and punctuation-insensitively, reject
   control characters and overlong phrases, and fail closed if too few safe unique candidates
   remain.
+- Apply an application-owned, versioned lexical risk policy after normalization. Generated model
+  output cannot assign or remove these tags. Tag matches feed the ranking and confirmation policy;
+  they are conservative safeguards, not a complete medical, legal, or privacy classifier.
 - Derive context, candidate-set, and candidate identifiers from canonical confirmed text and
-  versioned generator inputs. Record backend, model, generator, and prompt revisions on every
-  result.
+  versioned generator inputs. Record backend, model, generator, prompt, and risk-policy revisions
+  on every result.
 - Keep generation pure with respect to the message session. A candidate remains provisional
   until a separate explicit selection action confirms it.
 - Ship a deterministic YAML fixture backend for tests and CPU-only development. The Qwen/MLX

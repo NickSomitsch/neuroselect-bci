@@ -163,6 +163,20 @@ def condition_catalog() -> tuple[ConditionDefinition, ...]:
             condition=EvaluationCondition.ABLATION_REMOVE_CONTEXT,
             label="Ablation: remove confirmed conversation context",
             family=ConditionFamily.ABLATION,
+            availability=ConditionAvailability.UNAVAILABLE,
+            ranking_mode=RankingMode.TRANSPARENT_SAFE_FUSION,
+            neural_mode=NeuralMode.SIMULATED,
+            retrieval_mode=RetrievalMode.CURRENT,
+            safeguards_enabled=True,
+            unavailable_reason=(
+                "The controlled candidate backend does not estimate context-sensitive language "
+                "support, so a full conversation-context ablation would be inert."
+            ),
+        ),
+        ConditionDefinition(
+            condition=EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT,
+            label="Ablation: remove confirmed context from retrieval queries",
+            family=ConditionFamily.ABLATION,
             availability=ConditionAvailability.AVAILABLE,
             ranking_mode=RankingMode.TRANSPARENT_SAFE_FUSION,
             neural_mode=NeuralMode.SIMULATED,

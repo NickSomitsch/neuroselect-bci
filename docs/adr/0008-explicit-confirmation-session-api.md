@@ -18,11 +18,14 @@
 - Implement explicit reject, repeat, back, clear, other, and cancel operations through the state
   machine. Terminal finalized/cancelled sessions reject further mutation.
 - Require a dedicated finalization request followed by a one-time nonce, exact confirmed-text
-  SHA-256, and `explicit_confirmation=true`. Challenges expire after the configured five-minute
-  window. Selected risky content additionally requires a high-risk acknowledgement.
+  SHA-256, and `explicit_confirmation=true`. Recompute the live text hash at confirmation time,
+  reject mutation actions before changing any text or counters, and treat the exact expiry instant
+  as expired. Selected risky content additionally requires a high-risk acknowledgement.
 - Return aggregate round, selection, rejection, repeat, backtrack, clear, other, and manual-input
   counters. Do not expose confirmation nonces outside the challenge response or simulator ground
   truth in ordinary session state.
+- Use the tracked session policy as the launched API's source for candidate count, phrase length,
+  and challenge TTL. Keep fusion weights solely in the independently versioned ranking policy.
 - Allow the local SQLite store to cross the ASGI thread boundary while serializing database
   access with a reentrant lock. Run orchestration calls on the single application event loop.
 

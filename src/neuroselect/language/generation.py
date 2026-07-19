@@ -23,6 +23,7 @@ from neuroselect.language.models import (
     ProposalRejectionReason,
     StructuredCandidateResponse,
 )
+from neuroselect.language.risk import CandidateRiskTagger
 
 CONTROL_CANDIDATES = (
     ("control-other", "Other…", ControlPath.OTHER),
@@ -77,8 +78,13 @@ def _context_sha256(confirmed_text: str) -> str:
 class CandidateGenerator:
     """Filter backend proposals and inject explicit, non-language control paths."""
 
-    def __init__(self, backend: CandidateBackend) -> None:
+    def __init__(
+        self,
+        backend: CandidateBackend,
+        risk_tagger: CandidateRiskTagger | None = None,
+    ) -> None:
         self.backend = backend
+        self.risk_tagger = risk_tagger or CandidateRiskTagger()
 
     def generate(self, request: CandidateGenerationRequest) -> CandidateGenerationResult:
         proposals = self.backend.generate(request)
@@ -116,6 +122,13 @@ class CandidateGenerator:
         language_candidates: list[Candidate] = []
         raw_support: dict[str, float] = {}
         for proposal, visible_text, canonical_key in selected:
+            risk_tags = self.risk_tagger.tag(visible_text)
+            origins = {
+                "generic-language",
+                f"backend:{self.backend.metadata.backend_id}",
+            }
+            if risk_tags:
+                origins.add(f"risk-policy:{self.risk_tagger.policy.policy_revision}")
             candidate_digest = hashlib.sha256(
                 f"{context_sha256}\0{canonical_key}".encode()
             ).hexdigest()
@@ -129,9 +142,8 @@ class CandidateGenerator:
                         if len(visible_text.split()) == 1
                         else CandidateKind.PHRASE
                     ),
-                    origins=frozenset(
-                        {"generic-language", f"backend:{self.backend.metadata.backend_id}"}
-                    ),
+                    origins=frozenset(origins),
+                    risk_tags=risk_tags,
                 )
             )
             raw_support[candidate_id] = proposal.support
@@ -155,9 +167,13 @@ class CandidateGenerator:
                 self.backend.metadata.model_revision,
                 self.backend.metadata.generator_revision,
                 self.backend.metadata.prompt_revision,
+                self.risk_tagger.policy.policy_revision,
                 str(request.candidate_count),
                 str(request.maximum_phrase_tokens),
-                *(candidate.candidate_id for candidate in all_candidates),
+                *(
+                    f"{candidate.candidate_id}:{','.join(sorted(candidate.risk_tags))}"
+                    for candidate in all_candidates
+                ),
             )
         )
         set_digest = hashlib.sha256(set_material.encode()).hexdigest()
@@ -175,6 +191,7 @@ class CandidateGenerator:
                 candidate_id: action for candidate_id, _, action in CONTROL_CANDIDATES
             },
             backend=self.backend.metadata,
+            risk_policy_revision=self.risk_tagger.policy.policy_revision,
             diagnostics=GenerationDiagnostics(
                 raw_proposal_count=len(proposals),
                 selected_language_count=len(language_candidates),

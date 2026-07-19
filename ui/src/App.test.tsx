@@ -143,6 +143,7 @@ function makeView(
             prompt_revision: "prompt-v1",
             deterministic: true,
           },
+          risk_policy_revision: "conservative-sensitive-content-v1",
           diagnostics: {
             raw_proposal_count: 10,
             selected_language_count: 2,

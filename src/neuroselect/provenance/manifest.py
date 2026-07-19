@@ -63,6 +63,10 @@ class RunManifest(BaseModel):
     def validate_completion(self) -> RunManifest:
         if self.status is RunStatus.COMPLETED and self.completed_at is None:
             raise ValueError("completed runs require completed_at")
+        if self.status is RunStatus.COMPLETED and (
+            not self.package_versions or not self.device
+        ):
+            raise ValueError("completed runs require package versions and device provenance")
         if self.completed_at is not None and self.completed_at < self.started_at:
             raise ValueError("completed_at cannot precede started_at")
         return self

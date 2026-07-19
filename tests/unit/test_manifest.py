@@ -19,6 +19,8 @@ def make_manifest(**updates: object) -> RunManifest:
         "git_sha": "48f8314",
         "config_sha256": SHA256,
         "random_seeds": {"global": 20260717},
+        "package_versions": {"python": "3.12"},
+        "device": {"machine": "test-cpu"},
         "datasets": (
             ArtifactRef(
                 artifact_id="fixture-data",
@@ -44,6 +46,11 @@ def test_manifest_digest_is_stable() -> None:
 def test_completed_manifest_requires_completion_time() -> None:
     with pytest.raises(ValidationError, match="require completed_at"):
         make_manifest(completed_at=None)
+
+
+def test_completed_manifest_requires_runtime_provenance() -> None:
+    with pytest.raises(ValidationError, match="package versions and device"):
+        make_manifest(package_versions={})
 
 
 def test_manifest_rejects_negative_duration() -> None:

@@ -25,9 +25,9 @@ def test_service_rejects_non_loopback_host(host: str) -> None:
         ServiceConfig(host=host)
 
 
-def test_policy_rejects_evidence_weight_overcommitment() -> None:
-    with pytest.raises(ValidationError, match="cannot exceed one"):
-        SessionPolicyConfig(minimum_neural_weight=0.8, maximum_non_neural_weight=0.3)
+def test_session_policy_rejects_an_unsafe_finalization_ttl() -> None:
+    with pytest.raises(ValidationError):
+        SessionPolicyConfig(finalization_confirmation_ttl_seconds=59)
 
 
 def test_config_rejects_non_mapping_yaml(tmp_path: Path) -> None:

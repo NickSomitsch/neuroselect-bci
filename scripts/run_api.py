@@ -26,7 +26,7 @@ def main() -> None:
     args = parse_args()
     config = load_app_config(args.config)
     uvicorn.run(
-        create_app(),
+        create_app(session_policy=config.session_policy),
         host=config.service.host,
         port=config.service.port,
         log_level="info",

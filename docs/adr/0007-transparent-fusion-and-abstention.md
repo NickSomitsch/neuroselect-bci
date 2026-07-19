@@ -25,6 +25,9 @@
 - Require enhanced confirmation for elevated/high-risk top candidates and neural-language
   conflicts. A ranking result may display a provisional top candidate, but it structurally
   forbids automatic selection and never constitutes message confirmation.
+- Require the generator's application-owned risk taxonomy to match the ranker's elevated/high
+  taxonomy at service construction, preventing configured confirmation categories from becoming
+  unreachable or silently ignored.
 - For the P300 MVP, neural probabilities map directly to the identifiers of visible candidate
   tiles. Semantic mapping from broad EEG classes to open-vocabulary candidates is out of scope
   until a paradigm that requires it is evaluated.

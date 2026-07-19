@@ -9,7 +9,5 @@ service:
 session_policy:
   candidate_count: 8
   maximum_phrase_tokens: 4
-  minimum_neural_weight: 0.65
-  maximum_non_neural_weight: 0.35
   final_confirmation_required: true
   finalization_confirmation_ttl_seconds: 300

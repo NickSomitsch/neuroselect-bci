@@ -6,11 +6,38 @@ from fastapi.testclient import TestClient
 
 from neuroselect.api import create_app
 from neuroselect.bci import SeededNeuralSimulator, SimulationConfig
+from neuroselect.core.config import SessionPolicyConfig
 from neuroselect.orchestration import SessionOrchestrator
 from neuroselect.retrieval import KnowledgeRecordInput, SQLiteKnowledgeStore
 from neuroselect.synthetic import load_profiles
 
 NOW = datetime(2026, 7, 18, 12, 0, tzinfo=UTC)
+
+
+def test_app_factory_applies_the_tracked_session_policy() -> None:
+    policy = SessionPolicyConfig(
+        candidate_count=4,
+        maximum_phrase_tokens=1,
+        finalization_confirmation_ttl_seconds=60,
+    )
+    app = create_app(session_policy=policy)
+    try:
+        assert app.state.orchestrator.session_policy == policy
+        with TestClient(app) as client:
+            created = client.post(
+                "/api/v1/sessions",
+                json={"profile_id": "synthetic-concise", "input_mode": "simulation"},
+            )
+            session_id = created.json()["session"]["session_id"]
+            started = client.post(
+                f"/api/v1/sessions/{session_id}/rounds",
+                json={"simulated_target_index": 0},
+            )
+            candidates = started.json()["active_generation"]["candidate_set"]["candidates"]
+            assert len(candidates) == 4
+            assert len(candidates[0]["text"].split()) == 1
+    finally:
+        app.state.orchestrator.close()
 
 
 def make_client() -> tuple[TestClient, SessionOrchestrator]:

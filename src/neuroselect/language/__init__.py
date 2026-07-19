@@ -12,12 +12,15 @@ from neuroselect.language.models import (
     CandidateGenerationRequest,
     CandidateGenerationResult,
     CandidateProposal,
+    CandidateRiskPolicy,
+    CandidateRiskRule,
     ControlPath,
     FixtureBackendConfig,
     FixtureRule,
     GenerationDiagnostics,
     ProposalRejectionReason,
 )
+from neuroselect.language.risk import CandidateRiskTagger, load_candidate_risk_policy
 
 __all__ = [
     "BackendMetadata",
@@ -27,12 +30,16 @@ __all__ = [
     "CandidateGenerationResult",
     "CandidateGenerator",
     "CandidateProposal",
+    "CandidateRiskPolicy",
+    "CandidateRiskRule",
+    "CandidateRiskTagger",
     "ControlPath",
     "FixtureBackendConfig",
     "FixtureCandidateBackend",
     "FixtureRule",
     "GenerationDiagnostics",
     "ProposalRejectionReason",
+    "load_candidate_risk_policy",
     "load_fixture_backend_config",
     "parse_structured_proposals",
 ]

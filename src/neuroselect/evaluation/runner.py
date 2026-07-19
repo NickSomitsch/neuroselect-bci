@@ -72,7 +72,7 @@ class _ControlledCandidateBackend:
         model_id="neuroselect/controlled-target-presence",
         model_revision="controlled-proposals-v1",
         generator_revision="deterministic-generator-v1",
-        prompt_revision="controlled-fusion-evaluation-v1",
+        prompt_revision="controlled-target-presence-v1",
         deterministic=True,
     )
 
@@ -96,7 +96,7 @@ class _PreparedTrial:
     target_candidate_id: str
     simulated_evidence: NeuralSelectionEvidence
     current_retrieval: tuple[CandidateRetrievalEvidence, ...]
-    no_context_retrieval: tuple[CandidateRetrievalEvidence, ...]
+    no_query_context_retrieval: tuple[CandidateRetrievalEvidence, ...]
 
 
 def load_experiment_spec(path: str | Path) -> SimulatedExperimentSpec:
@@ -174,6 +174,9 @@ class SimulatedExperimentRunner:
                 "therefore unintended-word rate measures the confirmation safety invariant.",
                 "Personalized LoRA and complete calibrated-system conditions remain unavailable "
                 "until their real components and held-out evaluations exist.",
+                "Full conversation-context removal remains unavailable because the controlled "
+                "candidate backend has no context-sensitive language model; the available "
+                "retrieval-context ablation removes context only from retrieval queries.",
             ),
         )
 
@@ -298,7 +301,7 @@ class SimulatedExperimentRunner:
                             candidates=generation.candidate_set.candidates,
                             at_time=self.spec.evaluation_time,
                         ),
-                        no_context_retrieval=retriever.retrieve_for_candidates(
+                        no_query_context_retrieval=retriever.retrieve_for_candidates(
                             profile_id=message.profile_id,
                             confirmed_text="",
                             candidates=generation.candidate_set.candidates,
@@ -357,7 +360,9 @@ class SimulatedExperimentRunner:
             prepared_trial=prepared_trial,
             mode=definition.retrieval_mode,
             store=store,
-            remove_context=condition is EvaluationCondition.ABLATION_REMOVE_CONTEXT,
+            remove_query_context=(
+                condition is EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT
+            ),
         )
         generation = prepared_trial.generation
         candidate_ids = tuple(
@@ -435,10 +440,9 @@ class SimulatedExperimentRunner:
             message_id=prepared_trial.message.message_id,
             span_index=prepared_trial.span_index,
             message_span_count=len(prepared_trial.message.target_spans),
-            confirmed_context=(
-                ""
-                if condition is EvaluationCondition.ABLATION_REMOVE_CONTEXT
-                else prepared_trial.confirmed_context
+            confirmed_context=prepared_trial.confirmed_context,
+            retrieval_query_context_removed=(
+                condition is EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT
             ),
             target_text=prepared_trial.target_text,
             target_word_count=len(prepared_trial.target_text.split()),
@@ -552,13 +556,13 @@ class SimulatedExperimentRunner:
         prepared_trial: _PreparedTrial,
         mode: RetrievalMode,
         store: SQLiteKnowledgeStore,
-        remove_context: bool,
+        remove_query_context: bool,
     ) -> tuple[CandidateRetrievalEvidence, ...]:
         if mode is RetrievalMode.NONE:
             return ()
         base = (
-            prepared_trial.no_context_retrieval
-            if remove_context
+            prepared_trial.no_query_context_retrieval
+            if remove_query_context
             else prepared_trial.current_retrieval
         )
         if mode is RetrievalMode.CURRENT:

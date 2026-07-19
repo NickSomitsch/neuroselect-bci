@@ -1,0 +1,22 @@
+schema_version: "1.0"
+policy_revision: conservative-sensitive-content-v1
+
+rules:
+  - risk_tag: medical
+    patterns:
+      - '\b(?:doctor|hospital|medical|medicine|medication|pain|symptom|treatment)\b'
+  - risk_tag: financial
+    patterns:
+      - '\b(?:bank|banking|card number|credit card|debit card|money|payment|transfer)\b'
+  - risk_tag: legal
+    patterns:
+      - '\b(?:attorney|contract|court|lawyer|legal|lawsuit|will and testament)\b'
+  - risk_tag: consent
+    patterns:
+      - '\b(?:authorization|authorize|consent|permission|revoke consent)\b'
+  - risk_tag: personal-data
+    patterns:
+      - '\b(?:address|date of birth|passport|password|phone number|social security)\b'
+  - risk_tag: sensitive
+    patterns:
+      - '\b(?:confidential|private information|secret)\b'

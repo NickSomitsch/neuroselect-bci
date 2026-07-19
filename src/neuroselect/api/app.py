@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict
 
+from neuroselect.core.config import SessionPolicyConfig
 from neuroselect.core.models import FinalizationRequest
 from neuroselect.orchestration import (
     CreateSessionRequest,
@@ -34,10 +35,16 @@ class HealthResponse(BaseModel):
     api_version: Literal["v1"] = "v1"
 
 
-def create_app(service: SessionOrchestrator | None = None) -> FastAPI:
+def create_app(
+    service: SessionOrchestrator | None = None,
+    *,
+    session_policy: SessionPolicyConfig | None = None,
+) -> FastAPI:
     """Create the local API; callers can inject a deterministic service for tests."""
 
-    orchestrator = service or build_demo_orchestrator()
+    if service is not None and session_policy is not None:
+        raise ValueError("session_policy cannot be supplied with an injected service")
+    orchestrator = service or build_demo_orchestrator(session_policy=session_policy)
     app = FastAPI(
         title="NeuroSelect local research API",
         version="0.1.0-dev",

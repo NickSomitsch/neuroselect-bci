@@ -1,6 +1,6 @@
 """Reproducible controlled experiments over the simulated vertical slice."""
 
-from neuroselect.evaluation.artifacts import write_experiment_artifacts
+from neuroselect.evaluation.artifacts import capture_runtime_environment, write_experiment_artifacts
 from neuroselect.evaluation.conditions import condition_by_id, condition_catalog
 from neuroselect.evaluation.metrics import calculate_metrics, expected_calibration_error
 from neuroselect.evaluation.models import (
@@ -39,6 +39,7 @@ __all__ = [
     "SimulatedExperimentSpec",
     "TrialRecord",
     "calculate_metrics",
+    "capture_runtime_environment",
     "condition_by_id",
     "condition_catalog",
     "expected_calibration_error",
