@@ -8,7 +8,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
@@ -150,6 +150,14 @@ class CalibratedP300Decoder:
         self.epoch_sample_count = epoch_sample_count
         self.preprocessing_config = preprocessing_config
         self.development_groups = development_groups
+
+    @property
+    def decision_threshold(self) -> float:
+        return self.config.decision_threshold
+
+    @property
+    def calibration_bins(self) -> int:
+        return self.config.calibration_bins
 
     def predict_probabilities(self, data: npt.ArrayLike) -> npt.NDArray[np.float64]:
         epochs = np.asarray(data, dtype=np.float32)
@@ -332,8 +340,20 @@ def _selection_accuracy(predictions: tuple[EpochPrediction, ...]) -> tuple[int, 
     return len(outcomes), float(np.mean(outcomes)) if outcomes else None
 
 
+class EvaluationDecoder(Protocol):
+    @property
+    def decision_threshold(self) -> float: ...
+
+    @property
+    def calibration_bins(self) -> int: ...
+
+    def predict_probabilities(self, data: npt.ArrayLike) -> npt.NDArray[np.float64]: ...
+
+    def validate_collection(self, collection: _EpochCollection) -> None: ...
+
+
 def evaluate_decoder(
-    decoder: CalibratedP300Decoder,
+    decoder: EvaluationDecoder,
     batches: Sequence[EpochBatch],
 ) -> DecoderEvaluation:
     """Predict every event but compute original-task metrics from known labels only."""
@@ -351,7 +371,7 @@ def evaluate_decoder(
             session_id=metadata.session_id,
             true_label=metadata.label,
             target_probability=float(probability),
-            predicted_target=probability >= decoder.config.decision_threshold,
+            predicted_target=probability >= decoder.decision_threshold,
             onset_seconds=metadata.onset_seconds,
             stimulus_code=metadata.stimulus_code,
         )
@@ -364,14 +384,14 @@ def evaluate_decoder(
         labels = collection.labels[labeled_mask]
         _require_binary_labels(labels, "decoder evaluation")
         labeled_probabilities = probabilities[labeled_mask]
-        predicted = labeled_probabilities >= decoder.config.decision_threshold
+        predicted = labeled_probabilities >= decoder.decision_threshold
         metrics = BinaryDecoderMetrics(
             auroc=float(roc_auc_score(labels, labeled_probabilities)),
             balanced_accuracy=float(balanced_accuracy_score(labels, predicted)),
             brier_score=float(brier_score_loss(labels, labeled_probabilities)),
             negative_log_likelihood=float(log_loss(labels, labeled_probabilities, labels=(0, 1))),
             expected_calibration_error=_expected_calibration_error(
-                labels, labeled_probabilities, decoder.config.calibration_bins
+                labels, labeled_probabilities, decoder.calibration_bins
             ),
         )
     trial_count, selection_accuracy = _selection_accuracy(predictions)

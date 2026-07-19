@@ -28,6 +28,8 @@ synthetic evaluation assets:
   standardized FIF/NumPy artifacts, and subject/session leakage controls.
 - A CPU xDAWN/shrinkage-LDA baseline with held-subject Platt calibration, original-task metrics,
   checksum-addressed checkpoints, and deterministic virtual-clock P300 replay.
+- A compact CPU/MPS EEGNet with held-subject temperature scaling, frozen-feature subject adapters,
+  weights-only checkpoints, and strictly chronological SE001-to-SE002 drift reports.
 - Locked research-scope, dataset, and local-first architecture decisions.
 - Linting, type checking, tests, and continuous integration.
 
@@ -116,8 +118,9 @@ The command verifies the pinned PhysioNet checksum inventory and every EDF befor
 raw files under ignored `data/raw/`, and emits EEG-only MNE FIF plus decoder-ready epochs and typed
 checksum sidecars under ignored `data/processed/`. Remove `--limit-files` to process every block
 for the named subject. Dataset-author `Train`/`Test` folder labels are never treated as model
-splits; the tracked primary split holds out entire subjects, with separate bidirectional
-cross-session folds for drift analysis. Setup and CI remain offline.
+splits; the tracked primary split holds out entire subjects. SE001-to-SE002 is the primary
+chronological drift fold; its reverse is retained only as separately labeled condition/order
+sensitivity analysis. Setup and CI remain offline.
 
 After preparing recordings for all subjects in the tracked split, train and evaluate the CPU
 classical baseline with:
@@ -132,6 +135,18 @@ enter supervised metrics. Runs write ignored checkpoint, evaluation, and environ
 artifacts under `artifacts/models/p300-xdawn-lda-v1/`.
 Epoch artifacts prepared before schema 1.1 must first be regenerated with `make study-p-data` and
 `--overwrite` so exact source onset and stimulus-code metadata are available.
+
+Train the compact EEGNet comparator, its held-subject temperature scaler, and per-test-subject
+SE001 linear-head adapters with:
+
+```bash
+make p300-eegnet
+```
+
+This writes a tensor-only checkpoint plus original-task and chronological SE002 drift reports
+under `artifacts/models/p300-eegnet-v1/`. Feature layers are hash-checked before and after every
+adaptation. Subjects without enough labeled SE001 trials retain the subject-independent decoder
+and are marked for conservative abstention.
 
 Replay one prepared recording on a deterministic virtual clock with:
 
@@ -167,7 +182,7 @@ provenance.
 
 The first real-data integration will use offline P300 replay. Recorded target evidence may be mapped to visible candidate tiles for counterfactual system evaluation, but the resulting words were not selected live by the original participants. Original-task decoder results, counterfactual replay results, and controlled simulation results must always be reported separately.
 
-See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the P300 model card](docs/model-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md), and [the classical decoder/replay ADR](docs/adr/0012-classical-p300-decoder-and-replay.md) before contributing claims or experiment code.
+See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the P300 model card](docs/model-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md), [the classical decoder/replay ADR](docs/adr/0012-classical-p300-decoder-and-replay.md), and [the EEGNet/adaptation ADR](docs/adr/0013-eegnet-adaptation-and-session-drift.md) before contributing claims or experiment code.
 
 ## License
 

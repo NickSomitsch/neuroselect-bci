@@ -39,6 +39,7 @@ def capture_runtime_environment() -> tuple[dict[str, str], dict[str, str]]:
                 "pyyaml",
                 "scikit-learn",
                 "scipy",
+                "torch",
             )
         },
     }

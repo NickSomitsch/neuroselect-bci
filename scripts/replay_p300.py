@@ -6,8 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
-from neuroselect.bci import EpochReplay, ReplayState
-from neuroselect.decoding import read_decoder_artifacts
+from neuroselect.bci import EpochReplay, ProbabilityDecoder, ReplayState
+from neuroselect.decoding import read_decoder_artifacts, read_eegnet_artifacts
 from neuroselect.eeg import read_epoch_batch
 
 
@@ -25,7 +25,14 @@ def main() -> None:
     args = parse_args()
     if args.max_frames is not None and args.max_frames < 1:
         raise SystemExit("--max-frames must be positive")
-    decoder = read_decoder_artifacts(args.checkpoint)[0] if args.checkpoint else None
+    decoder: ProbabilityDecoder | None = None
+    if args.checkpoint:
+        if (args.checkpoint / "eegnet.json").exists():
+            decoder = read_eegnet_artifacts(args.checkpoint)[0]
+        elif (args.checkpoint / "decoder.json").exists():
+            decoder = read_decoder_artifacts(args.checkpoint)[0]
+        else:
+            raise SystemExit("checkpoint directory is neither an EEGNet nor classical run")
     replay = EpochReplay(read_epoch_batch(args.epoch_directory), speed=args.speed, decoder=decoder)
     if args.seek_seconds:
         replay.seek_seconds(args.seek_seconds)
