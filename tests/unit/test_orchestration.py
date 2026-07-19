@@ -46,9 +46,7 @@ class MutableClock:
 class RiskCandidateGenerator(CandidateGenerator):
     def __init__(self) -> None:
         config = load_fixture_backend_config()
-        sensitive = config.default_candidates[0].model_copy(
-            update={"text": "medical help"}
-        )
+        sensitive = config.default_candidates[0].model_copy(update={"text": "medical help"})
         configured = config.model_copy(
             update={"default_candidates": (sensitive, *config.default_candidates[1:])}
         )

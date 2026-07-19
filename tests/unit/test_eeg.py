@@ -460,6 +460,10 @@ def test_standardized_and_epoch_artifacts_round_trip(tmp_path: Path) -> None:
     assert np.array_equal(restored_batch.data, batch.data)
     assert np.array_equal(restored_batch.labels, batch.labels)
     assert restored_batch.metadata == batch.metadata
+    assert restored_batch.metadata[0].onset_seconds == batch.metadata[0].onset_seconds
+    assert restored_batch.metadata[0].stimulus_code == batch.metadata[0].stimulus_code
+    epoch_payload = json.loads((destination / "epochs.json").read_text(encoding="utf-8"))
+    assert epoch_payload["schema_version"] == "1.1"
     with pytest.raises(FileExistsError, match="refusing to overwrite"):
         write_standardized_recording(recording, tmp_path)
     with pytest.raises(FileExistsError, match="refusing to overwrite"):

@@ -1,4 +1,4 @@
-.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation study-p-data api format format-check lint typecheck test build verify
+.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation study-p-data p300-baseline p300-replay api format format-check lint typecheck test build verify
 
 setup: sync ui-install
 
@@ -22,6 +22,12 @@ simulated-evaluation:
 
 study-p-data:
 	uv run python scripts/prepare_study_p.py $(STUDY_P_ARGS)
+
+p300-baseline:
+	uv run python scripts/train_p300_baseline.py $(P300_BASELINE_ARGS)
+
+p300-replay:
+	uv run python scripts/replay_p300.py $(P300_REPLAY_ARGS)
 
 api:
 	uv run python scripts/run_api.py

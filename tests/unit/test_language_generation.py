@@ -165,25 +165,22 @@ def test_trusted_policy_tags_sensitive_candidates_after_generation() -> None:
             proposal("Have a nice day", 0.1),
         )
     )
-    result = CandidateGenerator(backend).generate(
-        CandidateGenerationRequest(candidate_count=6)
-    )
+    result = CandidateGenerator(backend).generate(CandidateGenerationRequest(candidate_count=6))
     candidates = {candidate.text: candidate for candidate in result.candidate_set.candidates}
 
     assert result.risk_policy_revision == "conservative-sensitive-content-v1"
     assert candidates["Please call my doctor"].risk_tags == frozenset({"medical"})
     assert candidates["Transfer the money"].risk_tags == frozenset({"financial"})
     assert candidates["Have a nice day"].risk_tags == frozenset()
-    assert "risk-policy:conservative-sensitive-content-v1" in candidates[
-        "Please call my doctor"
-    ].origins
+    assert (
+        "risk-policy:conservative-sensitive-content-v1"
+        in candidates["Please call my doctor"].origins
+    )
 
 
 def test_risk_policy_configuration_is_strict_and_versioned(tmp_path: Path) -> None:
     policy = load_candidate_risk_policy(RISK_CONFIG_PATH)
-    assert CandidateRiskTagger(policy).tag("share my passport") == frozenset(
-        {"personal-data"}
-    )
+    assert CandidateRiskTagger(policy).tag("share my passport") == frozenset({"personal-data"})
 
     payload = policy.model_dump(mode="json")
     payload["rules"] = [payload["rules"][0], payload["rules"][0]]

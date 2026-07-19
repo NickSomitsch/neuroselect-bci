@@ -1,0 +1,10 @@
+schema_version: "1.0"
+model_revision: xdawn-shrinkage-lda-platt-v1
+random_seed: 20260719
+xdawn_components: 2
+xdawn_regularization: 0.1
+lda_shrinkage: auto
+calibration_c: 1.0
+decision_threshold: 0.5
+calibration_bins: 10
+require_subject_disjoint: true

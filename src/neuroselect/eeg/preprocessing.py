@@ -138,6 +138,10 @@ def preprocess_recording(
             session_id=recording.metadata.key.session_id,
             label=event.label,
             onset_sample=event.onset_sample,
+            onset_seconds=event.onset_seconds,
+            stimulus_code=event.stimulus_code,
+            current_target=event.current_target,
+            selected_target=event.selected_target,
         )
         for event in accepted_events
     )

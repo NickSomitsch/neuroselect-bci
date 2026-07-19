@@ -26,6 +26,8 @@ synthetic evaluation assets:
   calibration and communication metrics, and checksum-addressed JSON artifacts.
 - A pinned bigP3BCI Study P inventory/import layer with MNE preprocessing, artifact reports,
   standardized FIF/NumPy artifacts, and subject/session leakage controls.
+- A CPU xDAWN/shrinkage-LDA baseline with held-subject Platt calibration, original-task metrics,
+  checksum-addressed checkpoints, and deterministic virtual-clock P300 replay.
 - Locked research-scope, dataset, and local-first architecture decisions.
 - Linting, type checking, tests, and continuous integration.
 
@@ -117,6 +119,29 @@ for the named subject. Dataset-author `Train`/`Test` folder labels are never tre
 splits; the tracked primary split holds out entire subjects, with separate bidirectional
 cross-session folds for drift analysis. Setup and CI remain offline.
 
+After preparing recordings for all subjects in the tracked split, train and evaluate the CPU
+classical baseline with:
+
+```bash
+make p300-baseline
+```
+
+The xDAWN/LDA feature model is fitted only on training subjects; its Platt calibrator is fitted
+only on validation subjects. Unknown-label source blocks receive predictions for replay but never
+enter supervised metrics. Runs write ignored checkpoint, evaluation, and environment-provenance
+artifacts under `artifacts/models/p300-xdawn-lda-v1/`.
+Epoch artifacts prepared before schema 1.1 must first be regenerated with `make study-p-data` and
+`--overwrite` so exact source onset and stimulus-code metadata are available.
+
+Replay one prepared recording on a deterministic virtual clock with:
+
+```bash
+make p300-replay P300_REPLAY_ARGS="<epoch-directory> --checkpoint <run-directory> --speed 2"
+```
+
+Replay preserves chronological source timestamps and unknown labels and supports programmatic
+pause, seek, reset, and speed changes. It is offline replay, not live EEG acquisition.
+
 Run the local research API at the configured loopback address with:
 
 ```bash
@@ -142,7 +167,7 @@ provenance.
 
 The first real-data integration will use offline P300 replay. Recorded target evidence may be mapped to visible candidate tiles for counterfactual system evaluation, but the resulting words were not selected live by the original participants. Original-task decoder results, counterfactual replay results, and controlled simulation results must always be reported separately.
 
-See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), and [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md) before contributing claims or experiment code.
+See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the P300 model card](docs/model-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md), and [the classical decoder/replay ADR](docs/adr/0012-classical-p300-decoder-and-replay.md) before contributing claims or experiment code.
 
 ## License
 

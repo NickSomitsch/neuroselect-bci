@@ -57,6 +57,7 @@ labels:
   1: target
 zero_only_stimulus_type_policy: unknown_not_non_target
 labeled_training_blocks_required_to_contain_both_classes: true
+epoch_artifact_schema_version: "1.1"
 participant_group: non_als
 participant_group_evidence: source_edf_headers
 participant_group_header_audit: 19_of_19_subjects

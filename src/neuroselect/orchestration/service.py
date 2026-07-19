@@ -146,9 +146,7 @@ class SessionOrchestrator:
             self.ranker.policy.high_risk_tags
         )
         if generated_risk_tags != ranked_risk_tags:
-            raise ValueError(
-                "candidate and ranking risk policies must define the same risk tags"
-            )
+            raise ValueError("candidate and ranking risk policies must define the same risk tags")
         self.clock = clock or (lambda: datetime.now(UTC))
         self.session_id_factory = session_id_factory or (lambda: f"session-{uuid.uuid4().hex[:20]}")
         self.nonce_factory = nonce_factory or (lambda: secrets.token_urlsafe(24))
@@ -259,9 +257,7 @@ class SessionOrchestrator:
     def apply_action(self, session_id: str, request: SessionActionRequest) -> SessionView:
         runtime = self._runtime(session_id)
         now = self._now()
-        evidence_id = (
-            runtime.ranking.neural_evidence_id if runtime.ranking is not None else None
-        )
+        evidence_id = runtime.ranking.neural_evidence_id if runtime.ranking is not None else None
         if request.action is SelectionActionType.CANCEL:
             self._transition(runtime, SessionEvent.CANCEL_SESSION, now)
             self._clear_round(runtime)

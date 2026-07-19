@@ -215,6 +215,10 @@ class EpochMetadata(BaseModel):
     session_id: Annotated[str, StringConstraints(pattern=r"^SE[0-9]{3}$")]
     label: P300Label
     onset_sample: int = Field(ge=0)
+    onset_seconds: float | None = Field(default=None, ge=0.0)
+    stimulus_code: int | None = Field(default=None, ge=0)
+    current_target: int | None = Field(default=None, ge=0)
+    selected_target: int | None = Field(default=None, ge=0)
 
 
 class RejectedEpoch(BaseModel):

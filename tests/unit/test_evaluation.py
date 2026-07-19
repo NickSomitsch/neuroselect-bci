@@ -224,9 +224,7 @@ def test_retrieval_ablations_are_explicit_and_profile_scoped() -> None:
     )
     assert all(
         record.retrieval_query_context_removed
-        for record in by_condition[
-            EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT
-        ]
+        for record in by_condition[EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT]
     )
     assert all(metric.unintended_word_rate == 0 for metric in result.metrics)
     assert all(metric.automatic_selection_violation_count == 0 for metric in result.metrics)

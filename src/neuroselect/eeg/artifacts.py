@@ -116,7 +116,7 @@ def write_epoch_batch(
     metadata_path.write_text(
         _canonical_json(
             {
-                "schema_version": "1.0",
+                "schema_version": "1.1",
                 "channel_names": batch.channel_names,
                 "sampling_rate_hz": batch.sampling_rate_hz,
                 "config": batch.config.model_dump(mode="json"),
@@ -151,7 +151,7 @@ def read_epoch_batch(directory: str | Path) -> EpochBatch:
     verify_sha256(data_path, checksums[data_path.name])
     verify_sha256(metadata_path, checksums[metadata_path.name])
     payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
+    if not isinstance(payload, dict) or payload.get("schema_version") != "1.1":
         raise ValueError("invalid epoch metadata schema")
     with np.load(data_path, allow_pickle=False) as arrays:
         data = arrays["data"]

@@ -12,10 +12,12 @@ license = { file = "LICENSE" }
 authors = [{ name = "Nick Somitsch" }]
 dependencies = [
   "fastapi>=0.115,<1",
+  "joblib>=1.4,<2",
   "mne>=1.9,<2",
   "numpy>=2,<3",
   "pydantic>=2.11,<3",
   "pyyaml>=6.0.2,<7",
+  "scikit-learn>=1.6,<2",
   "uvicorn>=0.30,<1",
 ]
 
@@ -37,6 +39,9 @@ packages = ["src/neuroselect"]
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers --cov=neuroselect --cov-report=term-missing --cov-fail-under=90"
 testpaths = ["tests"]
+filterwarnings = [
+  "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning:joblib.numpy_pickle",
+]
 
 [tool.coverage.run]
 branch = true
@@ -54,7 +59,7 @@ strict = true
 packages = ["neuroselect"]
 
 [[tool.mypy.overrides]]
-module = ["mne", "mne.*"]
+module = ["joblib", "mne", "mne.*", "sklearn", "sklearn.*"]
 ignore_missing_imports = true
 
 [tool.ruff]

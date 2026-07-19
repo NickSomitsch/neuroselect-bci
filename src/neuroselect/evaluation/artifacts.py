@@ -32,10 +32,13 @@ def capture_runtime_environment() -> tuple[dict[str, str], dict[str, str]]:
             for package in (
                 "neuroselect-bci",
                 "fastapi",
+                "joblib",
                 "mne",
                 "numpy",
                 "pydantic",
                 "pyyaml",
+                "scikit-learn",
+                "scipy",
             )
         },
     }
@@ -93,9 +96,7 @@ def write_experiment_artifacts(
         git_sha=git_sha,
         config_sha256=result.config_sha256,
         random_seeds={"global": result.spec.seed, "neural_simulator": result.spec.seed},
-        package_versions=(
-            captured_packages if package_versions is None else package_versions
-        ),
+        package_versions=(captured_packages if package_versions is None else package_versions),
         device=captured_device if device is None else device,
         datasets=(
             ArtifactRef(
