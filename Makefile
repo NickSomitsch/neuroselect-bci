@@ -1,4 +1,4 @@
-.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation counterfactual-fusion study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build verify
+.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation counterfactual-fusion research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
 
 setup: sync ui-install
 
@@ -22,6 +22,12 @@ simulated-evaluation:
 
 counterfactual-fusion:
 	uv run python scripts/run_counterfactual_fusion.py $(COUNTERFACTUAL_FUSION_ARGS)
+
+research-report: simulated-evaluation
+	uv run python scripts/build_research_report.py --overwrite $(RESEARCH_REPORT_ARGS)
+
+release-check:
+	uv run python scripts/check_release.py $(RELEASE_CHECK_ARGS)
 
 study-p-data:
 	uv run python scripts/prepare_study_p.py $(STUDY_P_ARGS)
@@ -61,4 +67,10 @@ test:
 build:
 	pnpm --dir ui build
 
+package:
+	uv build
+
 verify: format-check lint typecheck test build
+
+release: verify package research-report release-check
+	uv run python scripts/check_release.py --report artifacts/reports/neuroselect-research-release-v1

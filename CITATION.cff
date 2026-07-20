@@ -7,8 +7,8 @@ authors:
     given-names: Nick
 license: MIT
 repository-code: "https://github.com/NickSomitsch/neuroselect-bci"
-version: 0.1.0-dev
-date-released: 2026-07-17
+version: 0.1.0.dev0
+date-released: 2026-07-20
 keywords:
   - brain-computer interface
   - P300

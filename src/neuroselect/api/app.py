@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from importlib.metadata import version as package_version
 from typing import Literal
 
 from fastapi import FastAPI, Request, status
@@ -47,7 +48,7 @@ def create_app(
     orchestrator = service or build_demo_orchestrator(session_policy=session_policy)
     app = FastAPI(
         title="NeuroSelect local research API",
-        version="0.1.0-dev",
+        version=package_version("neuroselect-bci"),
         description=(
             "Local simulated/manual BCI communication research API. "
             "Generated candidates never constitute confirmed user text."

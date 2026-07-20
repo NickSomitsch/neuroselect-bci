@@ -18,6 +18,7 @@ class RunKind(StrEnum):
     EEG_ORIGINAL_TASK = "eeg_original_task"
     COUNTERFACTUAL_REPLAY = "counterfactual_replay"
     COMPONENT_EVALUATION = "component_evaluation"
+    RESEARCH_REPORT = "research_report"
 
 
 class RunStatus(StrEnum):

@@ -32,6 +32,8 @@ synthetic evaluation assets:
   weights-only checkpoints, and strictly chronological SE001-to-SE002 drift reports.
 - A checksum-addressed flash-to-tile aggregator and paired offline counterfactual A–F fusion
   runner with dependency-gated personalization, safety ablations, and hierarchical intervals.
+- A verified, evidence-separated research-report builder with deterministic paired intervals and
+  an automated release-readiness gate.
 - Locked research-scope, dataset, and local-first architecture decisions.
 - Linting, type checking, tests, and continuous integration.
 
@@ -194,11 +196,38 @@ Research artifacts, downloaded datasets, and model weights belong under the igno
 containing immutable data/model/policy identifiers and checksums, package versions, and device
 provenance.
 
+## Research release workflow
+
+Build the evidence-separated report from available verified artifacts with:
+
+```bash
+make research-report
+```
+
+The tracked recipe requires the controlled simulation artifact and lists xDAWN, EEGNet, and
+counterfactual results as optional until they exist locally. The generated JSON and Markdown keep
+controlled simulation, original-task EEG, and counterfactual replay in separate tables. A missing
+required source or dirty source manifest makes the report non-release-ready.
+
+Validate public documentation and version metadata and build the Python distributions with:
+
+```bash
+make release-check
+make package
+```
+
+`make release` runs the full verification, package, controlled evaluation, report, and strict
+report-readiness gate. It is expected to fail on a dirty worktree or while a required artifact is
+missing. See the [reproducibility guide](docs/reproducibility.md) for the evidence hierarchy.
+
 ## Research boundaries
 
-The first real-data integration will use offline P300 replay. Recorded target evidence may be mapped to visible candidate tiles for counterfactual system evaluation, but the resulting words were not selected live by the original participants. Original-task decoder results, counterfactual replay results, and controlled simulation results must always be reported separately.
+The first real-data integration uses offline P300 replay. Recorded target evidence may be mapped
+to visible candidate tiles for counterfactual system evaluation, but the resulting words were not
+selected live by the original participants. Original-task decoder results, counterfactual replay
+results, and controlled simulation results must always be reported separately.
 
-See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the P300 model card](docs/model-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md), [the classical decoder/replay ADR](docs/adr/0012-classical-p300-decoder-and-replay.md), [the EEGNet/adaptation ADR](docs/adr/0013-eegnet-adaptation-and-session-drift.md), and [the counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md) before contributing claims or experiment code.
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

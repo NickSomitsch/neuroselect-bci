@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from importlib.metadata import version as package_version
 
 from fastapi.testclient import TestClient
 
@@ -75,6 +76,9 @@ def test_manual_api_flow_requires_explicit_final_confirmation() -> None:
             "service": "neuroselect",
             "api_version": "v1",
         }
+        assert client.get("/openapi.json").json()["info"]["version"] == package_version(
+            "neuroselect-bci"
+        )
         profiles = client.get("/api/v1/profiles")
         assert profiles.status_code == 200
         assert [profile["profile_id"] for profile in profiles.json()] == [
