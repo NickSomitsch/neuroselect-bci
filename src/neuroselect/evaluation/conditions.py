@@ -85,8 +85,9 @@ def condition_catalog() -> tuple[ConditionDefinition, ...]:
             personalization_enabled=True,
             safeguards_enabled=True,
             unavailable_reason=(
-                "The complete condition requires the real LoRA and calibrated P300 decoder; "
-                "the current seeded simulator is not a substitute."
+                "The complete condition requires a real held-out LoRA and a prepared "
+                "counterfactual input from a calibrated P300 decoder; the seeded simulator "
+                "does not provide those artifacts."
             ),
         ),
         ConditionDefinition(

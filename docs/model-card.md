@@ -39,6 +39,19 @@ The implementation rejects epoch, selection-trial, recording, and subject overla
 development/test boundary. Configuration, data collections, checkpoint, results, environment, and
 device information are checksum-addressed in each run manifest.
 
+## Downstream counterfactual aggregation
+
+The offline fusion protocol converts calibrated flash probabilities into a distribution over one
+fixed visible tile grid. It sums target/non-target log likelihoods for each tile's stimulus-code
+signature and normalizes the scores with a configured softmax temperature. Counterfactual mapping
+swaps tile signatures while preserving every source event, code, onset, and probability. If the
+intended language candidate is absent, the recorded target maps to `Other`.
+
+This downstream distribution is not a word decoder. A successful tile replay means the remapped
+tile was ranked or completed under a counterfactual protocol; it does not mean the source
+participant intended its displayed text. Original-task, counterfactual, and controlled-simulation
+metrics remain separate.
+
 ## Metrics
 
 Required original-task metrics are event-level AUROC, balanced accuracy, Brier score, negative log
@@ -57,6 +70,8 @@ dataset evaluation is run.
   PyTorch and device versions and comparisons must not mix environments silently.
 - Subject adaptation estimates can be unstable with few selection trials and must never expand to
   full-layer fine-tuning under this protocol.
+- Counterfactual fusion has not been run across the pinned real-data split in this checkout, and a
+  real held-out language-model LoRA is not yet available for conditions D–F.
 - The model does not provide automatic selection; downstream use must retain repeat, abstention,
   and explicit-confirmation safeguards.
 
@@ -66,4 +81,6 @@ After preparing all required subject artifacts, run `make p300-baseline` for the
 or `make p300-eegnet` for EEGNet plus chronological adaptation. Use
 `make p300-replay P300_REPLAY_ARGS="<epoch-directory> --checkpoint <run-directory>"` for a
 virtual-clock JSONL replay with either checkpoint type. No dataset or model artifact is downloaded
-during CI.
+during CI. Use `make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input
+<prepared-input.json>"` only after preparing candidate-aligned flash probabilities and explicit
+language, adapter, and retrieval evidence.

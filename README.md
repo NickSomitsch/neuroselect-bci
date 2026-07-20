@@ -30,6 +30,8 @@ synthetic evaluation assets:
   checksum-addressed checkpoints, and deterministic virtual-clock P300 replay.
 - A compact CPU/MPS EEGNet with held-subject temperature scaling, frozen-feature subject adapters,
   weights-only checkpoints, and strictly chronological SE001-to-SE002 drift reports.
+- A checksum-addressed flash-to-tile aggregator and paired offline counterfactual A–F fusion
+  runner with dependency-gated personalization, safety ablations, and hierarchical intervals.
 - Locked research-scope, dataset, and local-first architecture decisions.
 - Linting, type checking, tests, and continuous integration.
 
@@ -157,6 +159,20 @@ make p300-replay P300_REPLAY_ARGS="<epoch-directory> --checkpoint <run-directory
 Replay preserves chronological source timestamps and unknown labels and supports programmatic
 pause, seek, reset, and speed changes. It is offline replay, not live EEG acquisition.
 
+Run the paired counterfactual fusion matrix from an explicitly prepared JSON input with:
+
+```bash
+make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input <prepared-input.json>"
+```
+
+The runner preserves the source flash stream and changes only which visible tile occupies the
+recorded target signature. It writes result JSON, trial/mapping JSONL, metric/interval CSV, and a
+checksum manifest under `artifacts/evaluation/counterfactual-fusion-v1/`. Conditions D–F require
+an adapter ID, adapter checksum, and held-out personalization evidence. Controlled fixtures can
+exercise those mechanics but are always marked non-claim-eligible. No real counterfactual result
+is bundled because Study P data and trained artifacts remain local and no language-model LoRA is
+implemented in this checkout.
+
 Run the local research API at the configured loopback address with:
 
 ```bash
@@ -182,7 +198,7 @@ provenance.
 
 The first real-data integration will use offline P300 replay. Recorded target evidence may be mapped to visible candidate tiles for counterfactual system evaluation, but the resulting words were not selected live by the original participants. Original-task decoder results, counterfactual replay results, and controlled simulation results must always be reported separately.
 
-See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the P300 model card](docs/model-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md), [the classical decoder/replay ADR](docs/adr/0012-classical-p300-decoder-and-replay.md), and [the EEGNet/adaptation ADR](docs/adr/0013-eegnet-adaptation-and-session-drift.md) before contributing claims or experiment code.
+See [the research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [the dataset ADR](docs/adr/0002-p300-and-study-p.md), [the Study P dataset card](docs/dataset-card.md), [the P300 model card](docs/model-card.md), [the synthetic benchmark ADR](docs/adr/0004-synthetic-benchmark-and-simulation.md), [the candidate-generation ADR](docs/adr/0005-structured-candidate-generation.md), [the personal-retrieval ADR](docs/adr/0006-local-personal-retrieval.md), [the transparent-fusion ADR](docs/adr/0007-transparent-fusion-and-abstention.md), [the session API ADR](docs/adr/0008-explicit-confirmation-session-api.md), [the accessible-interface ADR](docs/adr/0009-accessible-local-research-interface.md), [the controlled-evaluation ADR](docs/adr/0010-controlled-simulated-evaluation.md), [the pinned Study P data-layer ADR](docs/adr/0011-pinned-study-p-data-layer.md), [the classical decoder/replay ADR](docs/adr/0012-classical-p300-decoder-and-replay.md), [the EEGNet/adaptation ADR](docs/adr/0013-eegnet-adaptation-and-session-drift.md), and [the counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md) before contributing claims or experiment code.
 
 ## License
 

@@ -1,5 +1,13 @@
-"""BCI input adapters and evidence simulators."""
+"""BCI input adapters, flash aggregation, and evidence simulators."""
 
+from neuroselect.bci.aggregation import (
+    FlashLayout,
+    FlashProbability,
+    FlashProbabilityTrial,
+    TileAggregationConfig,
+    aggregate_flash_probabilities,
+    remap_recorded_target,
+)
 from neuroselect.bci.replay import EpochReplay, ProbabilityDecoder, ReplayFrame, ReplayState
 from neuroselect.bci.simulation import (
     SeededNeuralSimulator,
@@ -10,6 +18,9 @@ from neuroselect.bci.simulation import (
 
 __all__ = [
     "EpochReplay",
+    "FlashLayout",
+    "FlashProbability",
+    "FlashProbabilityTrial",
     "ProbabilityDecoder",
     "ReplayFrame",
     "ReplayState",
@@ -17,4 +28,7 @@ __all__ = [
     "SimulatedRound",
     "SimulationConfig",
     "SimulationRegime",
+    "TileAggregationConfig",
+    "aggregate_flash_probabilities",
+    "remap_recorded_target",
 ]

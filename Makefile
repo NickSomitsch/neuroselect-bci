@@ -1,4 +1,4 @@
-.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build verify
+.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation counterfactual-fusion study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build verify
 
 setup: sync ui-install
 
@@ -19,6 +19,9 @@ fusion-smoke:
 
 simulated-evaluation:
 	uv run python scripts/run_simulated_evaluation.py
+
+counterfactual-fusion:
+	uv run python scripts/run_counterfactual_fusion.py $(COUNTERFACTUAL_FUSION_ARGS)
 
 study-p-data:
 	uv run python scripts/prepare_study_p.py $(STUDY_P_ARGS)
