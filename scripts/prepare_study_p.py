@@ -70,6 +70,12 @@ def parse_args() -> argparse.Namespace:
         type=int,
         help="Development smoke limit after deterministic inventory selection.",
     )
+    parser.add_argument(
+        "--download-workers",
+        type=int,
+        default=1,
+        help="Bounded parallel EDF downloads; checksum verification remains per file.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -97,6 +103,8 @@ def main() -> None:
         raise SystemExit("--download requires an explicit --subjects selection")
     if args.limit_files is not None and args.limit_files < 1:
         raise SystemExit("--limit-files must be positive")
+    if not 1 <= args.download_workers <= 16:
+        raise SystemExit("--download-workers must lie in [1, 16]")
 
     inventory_path = args.raw_root / "SHA256SUMS.txt"
     if args.download:
@@ -120,7 +128,12 @@ def main() -> None:
     if args.limit_files is not None:
         selected = selected[: args.limit_files]
     if args.download:
-        download_source_files(selected, args.raw_root, accept_license=args.accept_license)
+        download_source_files(
+            selected,
+            args.raw_root,
+            accept_license=args.accept_license,
+            workers=args.download_workers,
+        )
 
     args.output_root.mkdir(parents=True, exist_ok=True)
     _write_split_manifests(args.output_root)

@@ -77,6 +77,24 @@ usable selections and the decoder metadata verifies all preregistered training a
 subjects. Counterfactual intervals remain descriptive hierarchical bootstrap summaries; three EEG
 test subjects do not support population or clinical generalization.
 
+Run Step 9 only after accepting the Study P CC-BY-4.0 license:
+
+```bash
+make study-p-research-data
+make p300-research-baseline
+make p300-research-audit
+```
+
+The data target uses bounded parallel downloads but retains per-file official checksum
+verification and atomic writes. Its post-download audit verifies all 190 labeled `Train`
+recordings without trusting directory presence alone. The research decoder is written separately
+under `artifacts/models/p300-xdawn-lda-research-v1/`; development results under
+`p300-xdawn-lda-v1/` are not overwritten or promoted.
+
+The Step 9 audit reads only checksum-verified JSON metadata and predictions. It requires the exact
+13/3/3 train/validation/test subject split, at least 48 replay trials per held-out subject, and a
+clean source manifest. The joblib checkpoint is not loaded by the audit.
+
 ## Research report
 
 After producing local artifacts, run:

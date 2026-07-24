@@ -124,6 +124,8 @@ def _require_binary_labels(labels: npt.NDArray[np.int8], purpose: str) -> None:
 
 def _labeled(collection: _EpochCollection) -> tuple[npt.NDArray[np.float32], npt.NDArray[np.int8]]:
     mask = collection.labels >= 0
+    if np.all(mask):
+        return collection.data, collection.labels
     return collection.data[mask], collection.labels[mask]
 
 

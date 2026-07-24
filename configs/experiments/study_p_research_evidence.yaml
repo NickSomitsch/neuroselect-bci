@@ -1,0 +1,35 @@
+schema_version: "1.0"
+protocol_revision: study-p-full-subject-split-research-v1
+evidence_id: study-p-research-evidence-v1
+evaluated_at: 2026-07-24T12:00:00Z
+processed_root: data/processed/bigp3bci-study-p/1.0.0
+decoder_artifacts: artifacts/models/p300-xdawn-lda-research-v1
+decoder_config: configs/decoding/xdawn_lda.yaml
+required_sessions:
+  - SE001
+  - SE002
+required_recordings_per_subject_per_session: 5
+required_training_subject_ids:
+  - P_01
+  - P_03
+  - P_04
+  - P_05
+  - P_07
+  - P_08
+  - P_10
+  - P_12
+  - P_14
+  - P_15
+  - P_16
+  - P_18
+  - P_19
+required_validation_subject_ids:
+  - P_06
+  - P_09
+  - P_17
+required_test_subject_ids:
+  - P_02
+  - P_11
+  - P_13
+minimum_usable_test_trials_per_subject: 48
+require_clean_decoder: true

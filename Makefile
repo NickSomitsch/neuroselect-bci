@@ -1,4 +1,6 @@
-.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report release-check release study-p-data study-p-research-data p300-baseline p300-research-baseline p300-research-audit p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+
+STUDY_P_RESEARCH_SUBJECTS = P_01 P_02 P_03 P_04 P_05 P_06 P_07 P_08 P_09 P_10 P_11 P_12 P_13 P_14 P_15 P_16 P_17 P_18 P_19
 
 setup: sync ui-install
 
@@ -96,8 +98,28 @@ release-check:
 study-p-data:
 	uv run python scripts/prepare_study_p.py $(STUDY_P_ARGS)
 
+study-p-research-data:
+	uv run python scripts/prepare_study_p.py \
+		--download \
+		--accept-license \
+		--subjects $(STUDY_P_RESEARCH_SUBJECTS) \
+		--source-partitions train \
+		--download-workers 16 \
+		--overwrite \
+		$(STUDY_P_RESEARCH_DATA_ARGS)
+	uv run python scripts/check_p300_research_evidence.py --data-only
+
 p300-baseline:
 	uv run python scripts/train_p300_baseline.py $(P300_BASELINE_ARGS)
+
+p300-research-baseline:
+	uv run python scripts/check_p300_research_evidence.py --data-only
+	uv run python scripts/train_p300_baseline.py \
+		--output artifacts/models/p300-xdawn-lda-research-v1 \
+		$(P300_RESEARCH_BASELINE_ARGS)
+
+p300-research-audit:
+	uv run python scripts/check_p300_research_evidence.py $(P300_RESEARCH_AUDIT_ARGS)
 
 p300-eegnet:
 	uv run python scripts/train_eegnet.py $(P300_EEGNET_ARGS)

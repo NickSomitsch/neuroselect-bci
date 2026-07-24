@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 from typing import Any
+from urllib.request import Request, urlopen
 
 import mne
 import numpy as np
@@ -270,19 +271,79 @@ def test_explicit_download_is_checksum_verified(
     remote_file.write_bytes(b"immutable-edf-fixture")
     digest = hashlib.sha256(remote_file.read_bytes()).hexdigest()
     source = make_source(digest=digest)
-    monkeypatch.setattr(study_p_module, "SOURCE_BASE_URL", remote_root.as_uri() + "/")
+    monkeypatch.setattr(study_p_module, "DOWNLOAD_BASE_URL", remote_root.as_uri() + "/")
 
     with pytest.raises(PermissionError, match="accept_license"):
         download_source_files((source,), local_root, accept_license=False)
-    downloaded = download_source_files((source,), local_root, accept_license=True)
+    downloaded = download_source_files(
+        (source,),
+        local_root,
+        accept_license=True,
+        workers=2,
+    )
     assert downloaded[0].read_bytes() == b"immutable-edf-fixture"
     assert download_source_files((source,), local_root, accept_license=True) == downloaded
+    with pytest.raises(ValueError, match="workers must lie"):
+        download_source_files(
+            (source,),
+            local_root,
+            accept_license=True,
+            workers=17,
+        )
 
     bad_source = source.model_copy(update={"sha256": "f" * 64})
     downloaded[0].unlink()
     with pytest.raises(ValueError, match="downloaded SHA-256 mismatch"):
         download_source_files((bad_source,), local_root, accept_license=True)
     assert not downloaded[0].exists()
+
+
+def test_source_download_retries_transient_network_failures(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    remote_root = tmp_path / "remote"
+    local_root = tmp_path / "local"
+    remote_file = remote_root / make_source().relative_path
+    remote_file.parent.mkdir(parents=True)
+    remote_file.write_bytes(b"retry-safe-edf-fixture")
+    source = make_source(digest=hashlib.sha256(remote_file.read_bytes()).hexdigest())
+    attempts = 0
+
+    def flaky_urlopen(request: str | Request, timeout: float | None = None) -> Any:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            raise ConnectionResetError("transient fixture failure")
+        return urlopen(request, timeout=timeout)
+
+    monkeypatch.setattr(study_p_module, "DOWNLOAD_BASE_URL", remote_root.as_uri() + "/")
+    monkeypatch.setattr("neuroselect.eeg.study_p.urlopen", flaky_urlopen)
+    monkeypatch.setattr("neuroselect.eeg.study_p.time.sleep", lambda _: None)
+
+    downloaded = download_source_files((source,), local_root, accept_license=True)
+
+    assert downloaded[0].read_bytes() == b"retry-safe-edf-fixture"
+    assert attempts == 2
+
+    downloaded[0].unlink()
+    attempts = 0
+    delays: list[int] = []
+
+    def unavailable_urlopen(request: str | Request, timeout: float | None = None) -> Any:
+        del request, timeout
+        nonlocal attempts
+        attempts += 1
+        raise ConnectionResetError("persistent fixture failure")
+
+    monkeypatch.setattr("neuroselect.eeg.study_p.urlopen", unavailable_urlopen)
+    monkeypatch.setattr("neuroselect.eeg.study_p.time.sleep", delays.append)
+
+    with pytest.raises(ConnectionResetError, match="persistent"):
+        download_source_files((source,), local_root, accept_license=True)
+
+    assert attempts == 3
+    assert delays == [1, 2]
+    assert not tuple(local_root.rglob("tmp*"))
 
 
 def test_pinned_manifest_download_requires_acceptance_and_reuses_valid_file(

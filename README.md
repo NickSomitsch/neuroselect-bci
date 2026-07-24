@@ -335,6 +335,33 @@ The tracked `language-research-adapter`, `language-research-evaluation`,
 building blocks for the protocol. `counterfactual-research-input` runs the strict readiness gate
 first and never synthesizes missing P300 evidence.
 
+## Step 9 full Study P EEG evidence
+
+Prepare every labeled `Train` recording from both Study P sessions with:
+
+```bash
+make study-p-research-data
+```
+
+The target downloads from PhysioNet's public AWS mirror through sixteen bounded workers, verifies
+every EDF against the pinned PhysioNet SHA-256 inventory, preprocesses 190 recordings, and audits
+the exact fixed split: 13 training subjects, 3 validation subjects, and 3 held-out test subjects.
+It requires five recordings per subject/session and at least 48 usable labeled selections from
+each of `P_02`, `P_11`, and `P_13`.
+
+Train the separate research xDAWN/LDA artifact and audit it with:
+
+```bash
+make p300-research-baseline
+make p300-research-audit
+```
+
+The trainer refuses incomplete data. The audit verifies decoder metadata and evaluation checksums
+without loading the executable joblib checkpoint, requires the exact train/calibration/test
+subject sets, and checks replay capacity per held-out subject. Research evidence must originate
+from a clean worktree; a functionally valid decoder trained while source changes are uncommitted
+is correctly reported as dirty and must be regenerated after committing.
+
 ## Research release workflow
 
 Build the evidence-separated report from available verified artifacts with:
@@ -366,7 +393,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

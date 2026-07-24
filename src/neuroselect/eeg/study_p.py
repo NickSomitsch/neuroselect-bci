@@ -6,8 +6,10 @@ import hashlib
 import os
 import re
 import tempfile
+import time
 import warnings
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path, PurePosixPath
 from urllib.request import Request, urlopen
 
@@ -31,12 +33,14 @@ DATASET_ID = "bigp3bci-study-p"
 SOURCE_VERSION = "1.0.0"
 SOURCE_DOI = "10.13026/0byy-ry86"
 SOURCE_BASE_URL = "https://physionet.org/files/bigp3bci/1.0.0/"
+DOWNLOAD_BASE_URL = "https://physionet-open.s3.amazonaws.com/bigp3bci/1.0.0/"
 CHECKSUM_MANIFEST_URL = f"{SOURCE_BASE_URL}SHA256SUMS.txt"
 CHECKSUM_MANIFEST_SHA256 = "75ce052ae8626a73b43887c994c4c0d17e5b0d775ad3083f759af20028e32fbb"
 EXPECTED_SUBJECT_IDS = tuple(f"P_{index:02d}" for index in range(1, 20))
 EXPECTED_SESSION_IDS = ("SE001", "SE002")
 EXPECTED_CHANNEL_COUNT = 32
 EXPECTED_SOURCE_FILE_COUNT = 228
+DOWNLOAD_ATTEMPTS = 3
 
 _SOURCE_PATTERN = re.compile(
     r"^bigP3BCI-data/StudyP/(?P<subject>P_[0-9]{2})/(?P<session>SE[0-9]{3})/"
@@ -169,25 +173,32 @@ def select_source_files(
 
 def _download_verified_file(url: str, destination: Path, expected_sha256: str) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    digest = hashlib.sha256()
     request = Request(url, headers={"User-Agent": "NeuroSelect/0.1 dataset preparation"})
-    with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temporary:
-        temporary_path = Path(temporary.name)
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
-            with urlopen(request, timeout=60) as response:
-                while chunk := response.read(1024 * 1024):
-                    digest.update(chunk)
-                    temporary.write(chunk)
-            observed = digest.hexdigest()
-            if observed != expected_sha256:
-                raise ValueError(
-                    f"downloaded SHA-256 mismatch for {url}: expected {expected_sha256}, "
-                    f"got {observed}"
-                )
-            os.replace(temporary_path, destination)
-        except BaseException:
-            temporary_path.unlink(missing_ok=True)
-            raise
+            digest = hashlib.sha256()
+            with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as temporary:
+                temporary_path = Path(temporary.name)
+                try:
+                    with urlopen(request, timeout=60) as response:
+                        while chunk := response.read(1024 * 1024):
+                            digest.update(chunk)
+                            temporary.write(chunk)
+                    observed = digest.hexdigest()
+                    if observed != expected_sha256:
+                        raise ValueError(
+                            f"downloaded SHA-256 mismatch for {url}: "
+                            f"expected {expected_sha256}, got {observed}"
+                        )
+                    os.replace(temporary_path, destination)
+                except BaseException:
+                    temporary_path.unlink(missing_ok=True)
+                    raise
+            return
+        except OSError:
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise
+            time.sleep(attempt)
 
 
 def download_pinned_inventory(destination: str | Path, *, accept_license: bool) -> Path:
@@ -208,23 +219,31 @@ def download_source_files(
     destination_root: str | Path,
     *,
     accept_license: bool,
+    workers: int = 1,
 ) -> tuple[Path, ...]:
     """Download only selected EDFs, verifying every official checksum before use."""
 
     if not accept_license:
         raise PermissionError("pass accept_license=True after reviewing CC-BY-4.0")
+    if workers < 1 or workers > 16:
+        raise ValueError("download workers must lie in [1, 16]")
     root = Path(destination_root)
-    local_paths: list[Path] = []
-    for source in sources:
+
+    def fetch(source: StudyPSourceFile) -> Path:
         destination = root / source.relative_path
         if destination.exists():
             verify_sha256(destination, source.sha256)
         else:
             _download_verified_file(
-                f"{SOURCE_BASE_URL}{source.relative_path}", destination, source.sha256
+                f"{DOWNLOAD_BASE_URL}{source.relative_path}", destination, source.sha256
             )
-        local_paths.append(destination)
-    return tuple(local_paths)
+        return destination
+
+    selected = tuple(sources)
+    if workers == 1:
+        return tuple(fetch(source) for source in selected)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        return tuple(executor.map(fetch, selected))
 
 
 def _sample_integer(raw: BaseRaw, channel_name: str, sample: int) -> int | None:

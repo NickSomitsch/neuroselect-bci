@@ -12,7 +12,7 @@ counterfactual_fusion_config: configs/experiments/counterfactual_fusion_research
 adapter_root: artifacts/models/language-lora
 adapter_suffix: -research-v1
 language_artifacts: artifacts/evaluation/held-out-language-personalization-research-v1
-decoder_artifacts: artifacts/models/p300-xdawn-lda-v1
+decoder_artifacts: artifacts/models/p300-xdawn-lda-research-v1
 required_profile_ids:
   - synthetic-casual
   - synthetic-concise
