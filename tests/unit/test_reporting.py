@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
@@ -249,6 +250,67 @@ def test_report_builds_verified_separate_table_and_paired_intervals(tmp_path: Pa
     assert "Source Git revision: `b4321f7`" in markdown
     assert "Release ready: **yes**" in markdown
     assert "missing (optional)" in markdown
+    assert "target_availability_rate" in markdown
+
+
+def test_report_verifies_original_simulation_digest_before_schema_upgrade(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "simulation"
+    write_simulation_source(source)
+    trial_payloads = [
+        json.loads(line)
+        for line in (source / "trials.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
+    for payload in trial_payloads:
+        payload.pop("candidate_generation_failed")
+
+    def canonical(payload: object) -> str:
+        return json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
+
+    trials_content = "\n".join(canonical(payload) for payload in trial_payloads) + "\n"
+    summary = json.loads((source / "metrics.json").read_text(encoding="utf-8"))
+    summary.pop("result_sha256")
+    summary.pop("trial_record_count")
+    original_result = {**summary, "trial_records": trial_payloads}
+    result_sha256 = hashlib.sha256(canonical(original_result).encode()).hexdigest()
+    summary["result_sha256"] = result_sha256
+    summary["trial_record_count"] = len(trial_payloads)
+    summary_content = canonical(summary) + "\n"
+    (source / "trials.jsonl").write_text(trials_content, encoding="utf-8")
+    (source / "metrics.json").write_text(summary_content, encoding="utf-8")
+    manifest_path = source / "manifest.json"
+    manifest = RunManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+    output_contents = {
+        "artifact://trials.jsonl": trials_content,
+        "artifact://metrics.json": summary_content,
+    }
+    updated_manifest = manifest.model_copy(
+        update={
+            "outputs": tuple(
+                output.model_copy(
+                    update={
+                        "sha256": hashlib.sha256(output_contents[output.uri].encode()).hexdigest()
+                    }
+                )
+                for output in manifest.outputs
+            ),
+            "metadata": {**manifest.metadata, "result_sha256": result_sha256},
+        }
+    )
+    manifest_path.write_text(
+        updated_manifest.canonical_json() + "\n",
+        encoding="utf-8",
+    )
+
+    report = ResearchReportBuilder(report_spec(source)).build()
+
+    assert report.tables[0].evidence_kind is EvidenceKind.CONTROLLED_SIMULATION
 
 
 def test_report_artifacts_round_trip_and_detect_tampering(tmp_path: Path) -> None:
@@ -405,6 +467,16 @@ def test_tracked_report_config_is_strict_and_release_metadata_is_complete(
     assert spec.sources[0].required is True
     assert spec.reject_dirty_sources is True
     assert len(spec.digest()) == 64
+    development_spec = load_research_report_spec(
+        ROOT / "configs/release/development_evidence_report.yaml"
+    )
+    assert tuple(source.source_id for source in development_spec.sources) == (
+        "controlled-simulation",
+        "xdawn-original-task",
+        "counterfactual-development",
+    )
+    assert all(source.required for source in development_spec.sources)
+    assert development_spec.bootstrap_resamples == 100
 
     invalid = tmp_path / "invalid.yaml"
     invalid.write_text("- invalid\n", encoding="utf-8")

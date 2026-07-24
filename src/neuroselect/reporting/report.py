@@ -284,12 +284,13 @@ def _simulation_table(source: _VerifiedSource, report_spec: ResearchReportSpec) 
     result_sha256 = summary.pop("result_sha256", None)
     declared_count = summary.pop("trial_record_count", None)
     trial_payloads = _read_jsonl(trials_path)
-    summary["trial_records"] = trial_payloads
+    original_result_payload = {**summary, "trial_records": trial_payloads}
+    original_result_sha256 = _sha256_text(_canonical_json(original_result_payload))
     try:
-        result = ExperimentResult.model_validate(summary)
+        result = ExperimentResult.model_validate(original_result_payload)
     except ValueError as error:
         raise ResearchReportInputError(f"invalid simulation result: {error}") from error
-    if declared_count != len(result.trial_records) or result_sha256 != result.digest():
+    if declared_count != len(result.trial_records) or result_sha256 != original_result_sha256:
         raise ResearchReportInputError("simulation result count or digest does not agree")
     if (
         source.manifest.run_id != result.run_id
@@ -544,17 +545,25 @@ def _format_value(value: object) -> str:
 MARKDOWN_METRIC_PRIORITY = (
     "model",
     "trial_count",
+    "available_trial_count",
     "labeled_epoch_count",
     "unknown_epoch_count",
     "selection_trial_count",
+    "target_availability_rate",
     "top_1_candidate_recall",
     "top_3_candidate_recall",
+    "top_1_recall_given_available",
+    "top_3_recall_given_available",
+    "other_fallback_success_rate",
     "selection_completion_rate",
     "final_message_exact_accuracy",
     "words_per_minute",
     "correction_rate",
     "abstention_rate",
     "repeat_request_rate",
+    "display_accuracy",
+    "incorrect_display_rate",
+    "candidate_generation_failure_rate",
     "unintended_word_rate",
     "auroc",
     "balanced_accuracy",

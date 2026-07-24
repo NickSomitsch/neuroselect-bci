@@ -281,6 +281,18 @@ Research artifacts, downloaded datasets, and model weights belong under the igno
 containing immutable data/model/policy identifiers and checksums, package versions, and device
 provenance.
 
+Build the Step 6 evidence-separated development report with:
+
+```bash
+make development-report
+```
+
+The tracked recipe requires the current controlled simulation, xDAWN original-task, and Step 5
+counterfactual artifacts. It verifies every source and writes separate evidence tables under
+`artifacts/reports/neuroselect-development-evidence-v1/`. Target availability and conditional
+recall are shown explicitly beside counterfactual top-k values. Add
+`DEVELOPMENT_REPORT_ARGS="--overwrite"` when intentionally replacing an existing local report.
+
 ## Research release workflow
 
 Build the evidence-separated report from available verified artifacts with:

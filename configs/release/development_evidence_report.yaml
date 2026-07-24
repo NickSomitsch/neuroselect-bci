@@ -1,0 +1,25 @@
+schema_version: "1.0"
+report_id: neuroselect-development-evidence-v1
+title: NeuroSelect development evidence report
+generated_at: 2026-07-24T12:00:00Z
+bootstrap_seed: 20260724
+bootstrap_resamples: 100
+confidence_level: 0.95
+reject_dirty_sources: true
+sources:
+  - source_id: controlled-simulation
+    label: Controlled held-out simulation
+    path: artifacts/evaluation/simulated-vertical-slice-v2
+    expected_run_kind: simulation
+    required: true
+    reference_condition: current_safe_fusion
+  - source_id: xdawn-original-task
+    label: xDAWN original-task Study P evaluation
+    path: artifacts/models/p300-xdawn-lda-v1
+    expected_run_kind: eeg_original_task
+    required: true
+  - source_id: counterfactual-development
+    label: Development offline counterfactual fusion evaluation
+    path: artifacts/evaluation/counterfactual-fusion-development-v1
+    expected_run_kind: counterfactual_replay
+    required: true

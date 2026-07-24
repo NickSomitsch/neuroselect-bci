@@ -10,6 +10,7 @@ from pathlib import Path
 from neuroselect.reporting import (
     ResearchReportBuilder,
     load_research_report_spec,
+    read_research_report_artifacts,
     write_research_report_artifacts,
 )
 
@@ -70,10 +71,18 @@ def main() -> None:
         source_tree_sha256=source_tree_sha256,
         overwrite=args.overwrite,
     )
+    restored_report, restored_manifest = read_research_report_artifacts(args.output)
+    if restored_report != report or restored_manifest != manifest:
+        raise ValueError("written research report failed read-back verification")
     print(f"Report: {report.run_id}")
     print(f"Release ready: {report.release_ready}")
     print(f"Available evidence tables: {len(report.tables)}")
     print(f"Missing sources: {len(report.missing_sources)}")
+    for table in report.tables:
+        print(
+            f"- {table.table_id}: {table.evidence_kind.value}, "
+            f"claim eligible={table.claim_eligible}, dirty={table.source_tree_dirty}"
+        )
     for missing in report.missing_sources:
         requirement = "required" if missing.required else "optional"
         print(f"- {missing.source_id}: {missing.reason} ({requirement})")

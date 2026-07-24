@@ -46,6 +46,12 @@ trial and interval coverage, and reads the written artifacts back through the st
 Use `COUNTERFACTUAL_EVALUATION_ARGS="--overwrite"` only when intentionally replacing the local
 development result.
 
+Build Step 6 with `make development-report`. Its tracked recipe requires the controlled
+simulation, xDAWN original-task, and development counterfactual manifests and renders them as
+separate evidence tables. The report shows target availability and conditional counterfactual
+recall and never pools the three evidence tiers. Use
+`DEVELOPMENT_REPORT_ARGS="--overwrite"` only to replace an existing local report.
+
 ## Research report
 
 After producing local artifacts, run:

@@ -1,4 +1,4 @@
-.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation development-report research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
 
 setup: sync ui-install
 
@@ -47,6 +47,12 @@ counterfactual-evaluation:
 		--config configs/experiments/counterfactual_fusion_development.yaml \
 		--output artifacts/evaluation/counterfactual-fusion-development-v1 \
 		$(COUNTERFACTUAL_EVALUATION_ARGS)
+
+development-report:
+	uv run python scripts/build_research_report.py \
+		--config configs/release/development_evidence_report.yaml \
+		--output artifacts/reports/neuroselect-development-evidence-v1 \
+		$(DEVELOPMENT_REPORT_ARGS)
 
 research-report: simulated-evaluation
 	uv run python scripts/build_research_report.py --overwrite $(RESEARCH_REPORT_ARGS)
