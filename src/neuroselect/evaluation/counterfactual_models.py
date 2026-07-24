@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_core import to_jsonable_python
 
 from neuroselect.bci import FlashLayout, FlashProbabilityTrial, TileAggregationConfig
 from neuroselect.core.models import CandidateKind, CandidateSet
@@ -36,6 +37,39 @@ COUNTERFACTUAL_CONDITIONS = frozenset(
         EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT,
     }
 )
+
+
+def _normalize_unordered_values(value: object) -> object:
+    """Convert sets to deterministically ordered JSON-compatible collections."""
+
+    if isinstance(value, dict):
+        return {key: _normalize_unordered_values(item) for key, item in value.items()}
+    if isinstance(value, set | frozenset):
+        normalized = [_normalize_unordered_values(item) for item in value]
+        return sorted(
+            normalized,
+            key=lambda item: json.dumps(
+                to_jsonable_python(item),
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ),
+        )
+    if isinstance(value, list | tuple):
+        return [_normalize_unordered_values(item) for item in value]
+    return value
+
+
+def canonical_counterfactual_json(value: object) -> str:
+    """Serialize counterfactual values with stable mapping and set ordering."""
+
+    normalized = _normalize_unordered_values(value)
+    return json.dumps(
+        to_jsonable_python(normalized),
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
 
 
 class CounterfactualFusionSpec(BaseModel):
@@ -121,7 +155,8 @@ class CounterfactualFusionTrial(BaseModel):
             for item in self.candidate_set.candidates
             if item.candidate_id == self.other_candidate_id
         )
-        if other.kind is not CandidateKind.CONTROL or other.text.casefold() != "other":
+        normalized_other = other.text.casefold().strip().rstrip(".…").strip()
+        if other.kind is not CandidateKind.CONTROL or normalized_other != "other":
             raise ValueError("other_candidate_id must identify the visible Other control")
         if self.intended_candidate_id is not None and self.intended_text is not None:
             intended_candidate = next(
@@ -224,8 +259,14 @@ class CounterfactualExperimentInput(BaseModel):
 
     schema_version: Literal["1.0", "2.0"] = "2.0"
     prepared_at: datetime
+    preparation_revision: str | None = Field(default=None, min_length=1, max_length=160)
+    preparation_config_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     source_decoder_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     original_task_evaluation_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_language_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    source_language_result_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    source_evidence_claim_eligible: bool = True
+    preparation_limitations: tuple[str, ...] = ()
     spec: CounterfactualFusionSpec
     trials: tuple[CounterfactualFusionTrial, ...] = Field(min_length=1)
 
@@ -235,6 +276,12 @@ class CounterfactualExperimentInput(BaseModel):
             raise ValueError("counterfactual input and specification schema versions must agree")
         if self.prepared_at.tzinfo is None or self.prepared_at.utcoffset() is None:
             raise ValueError("counterfactual input preparation time must include a timezone")
+        if (self.preparation_revision is None) != (self.preparation_config_sha256 is None):
+            raise ValueError("preparation revision and checksum must be present together")
+        if (self.source_language_manifest_sha256 is None) != (
+            self.source_language_result_sha256 is None
+        ):
+            raise ValueError("language manifest and result checksums must be present together")
         identifiers = [trial.trial_id for trial in self.trials]
         if len(identifiers) != len(set(identifiers)):
             raise ValueError("counterfactual input trial IDs must be unique")
@@ -299,9 +346,25 @@ class CounterfactualExperimentInput(BaseModel):
             raise ValueError("one personalization adapter ID cannot reference multiple checksums")
         return self
 
+    def canonical_json(self) -> str:
+        """Return stable JSON, including deterministic ordering for provenance sets."""
+
+        return canonical_counterfactual_json(self.model_dump(mode="python"))
+
     def digest(self) -> str:
+        if self.schema_version == "2.0":
+            return hashlib.sha256(self.canonical_json().encode()).hexdigest()
         payload = self.model_dump(mode="json")
         if self.schema_version == "1.0":
+            for field in (
+                "preparation_revision",
+                "preparation_config_sha256",
+                "source_language_manifest_sha256",
+                "source_language_result_sha256",
+                "source_evidence_claim_eligible",
+                "preparation_limitations",
+            ):
+                payload.pop(field, None)
             v2_trial_fields = (
                 "synthetic_profile_id",
                 "message_id",
@@ -379,6 +442,8 @@ class CounterfactualFusionResult(BaseModel):
     input_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     source_decoder_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     original_task_evaluation_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_language_manifest_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    source_language_result_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     personalization_adapters: dict[str, str] = Field(default_factory=dict)
     spec: CounterfactualFusionSpec
     mapping_provenance: tuple[CounterfactualTrialProvenance, ...] = Field(min_length=1)
@@ -396,6 +461,10 @@ class CounterfactualFusionResult(BaseModel):
             raise ValueError("counterfactual result time must include a timezone")
         if self.config_sha256 != self.spec.digest():
             raise ValueError("counterfactual result config hash must match the embedded spec")
+        if (self.source_language_manifest_sha256 is None) != (
+            self.source_language_result_sha256 is None
+        ):
+            raise ValueError("language manifest and result checksums must be present together")
         if self.spec.personalization_evidence_kind == "controlled_fixture" and self.claim_eligible:
             raise ValueError("controlled personalization fixtures cannot be claim-eligible")
         conditions = {record.condition for record in self.trial_records}

@@ -34,6 +34,12 @@ controlled style proxy and must not be reported as LoRA evidence. Real local run
 adapter produced by `make language-lora`; keep the base-model and adapter identities in every
 downstream artifact.
 
+Build the local development counterfactual input with `make counterfactual-input`. The builder
+verifies the held-out language and decoder manifests, pairs only complete language messages with
+distinct labeled EEG selection trials, and records all source checksums. Run it with
+`configs/experiments/counterfactual_fusion_development.yaml`; this limited evidence is always
+non-claim-eligible.
+
 ## Research report
 
 After producing local artifacts, run:

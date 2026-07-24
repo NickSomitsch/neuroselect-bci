@@ -214,6 +214,7 @@ class CounterfactualFusionRunner:
             "simulation metrics must remain in separate result tables.",
             "Intervals are descriptive hierarchical bootstrap summaries and do not by themselves "
             "establish non-inferiority or clinical utility.",
+            *self.input.preparation_limitations,
         ]
         if controlled:
             limitations.append(
@@ -234,13 +235,15 @@ class CounterfactualFusionRunner:
             input_sha256=input_sha,
             source_decoder_manifest_sha256=self.input.source_decoder_manifest_sha256,
             original_task_evaluation_sha256=self.input.original_task_evaluation_sha256,
+            source_language_manifest_sha256=self.input.source_language_manifest_sha256,
+            source_language_result_sha256=self.input.source_language_result_sha256,
             personalization_adapters=adapters,
             spec=self.spec,
             mapping_provenance=tuple(item.provenance for item in prepared),
             trial_records=records,
             metrics=metrics,
             paired_intervals=intervals,
-            claim_eligible=not controlled,
+            claim_eligible=(self.input.source_evidence_claim_eligible and not controlled),
             limitations=tuple(limitations),
         )
 

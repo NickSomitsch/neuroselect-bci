@@ -1,4 +1,4 @@
-.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation fusion-smoke simulated-evaluation counterfactual-fusion research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
 
 setup: sync ui-install
 
@@ -34,6 +34,9 @@ fusion-smoke:
 
 simulated-evaluation:
 	uv run python scripts/run_simulated_evaluation.py
+
+counterfactual-input:
+	uv run python scripts/prepare_counterfactual_input.py $(COUNTERFACTUAL_INPUT_ARGS)
 
 counterfactual-fusion:
 	uv run python scripts/run_counterfactual_fusion.py $(COUNTERFACTUAL_FUSION_ARGS)

@@ -5,17 +5,19 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
-import json
 from pathlib import Path
 
 from neuroselect.evaluation.artifacts import capture_runtime_environment
-from neuroselect.evaluation.counterfactual_models import CounterfactualFusionResult
+from neuroselect.evaluation.counterfactual_models import (
+    CounterfactualFusionResult,
+    canonical_counterfactual_json,
+)
 from neuroselect.provenance import ArtifactRef, RunKind, RunManifest, RunStatus
 from neuroselect.ranking import load_ranking_policy
 
 
 def _canonical_json(payload: object) -> str:
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return canonical_counterfactual_json(payload)
 
 
 def _sha256(content: str) -> str:
@@ -67,14 +69,14 @@ def write_counterfactual_artifacts(
         raise FileExistsError(f"refusing to overwrite counterfactual artifacts: {existing}")
     destination.mkdir(parents=True, exist_ok=True)
 
-    result_content = _canonical_json(result.model_dump(mode="json")) + "\n"
+    result_content = _canonical_json(result.model_dump(mode="python")) + "\n"
     trials_content = (
-        "\n".join(_canonical_json(item.model_dump(mode="json")) for item in result.trial_records)
+        "\n".join(_canonical_json(item.model_dump(mode="python")) for item in result.trial_records)
         + "\n"
     )
     mappings_content = (
         "\n".join(
-            _canonical_json(item.model_dump(mode="json")) for item in result.mapping_provenance
+            _canonical_json(item.model_dump(mode="python")) for item in result.mapping_provenance
         )
         + "\n"
     )
@@ -150,7 +152,7 @@ def write_counterfactual_artifacts(
 
     package_versions, device = capture_runtime_environment()
     ranking_policy = load_ranking_policy()
-    ranking_payload = _canonical_json(ranking_policy.model_dump(mode="json"))
+    ranking_payload = _canonical_json(ranking_policy.model_dump(mode="python"))
     manifest = RunManifest(
         run_id=result.run_id,
         run_kind=RunKind.COUNTERFACTUAL_REPLAY,
@@ -178,6 +180,23 @@ def write_counterfactual_artifacts(
                 artifact_id="original-task-evaluation",
                 uri="artifact://original-task-evaluation",
                 sha256=result.original_task_evaluation_sha256,
+            ),
+            *(
+                (
+                    ArtifactRef(
+                        artifact_id="source-language-manifest",
+                        uri="artifact://source-language-manifest",
+                        sha256=result.source_language_manifest_sha256,
+                    ),
+                    ArtifactRef(
+                        artifact_id="source-language-result",
+                        uri="artifact://source-language-result",
+                        sha256=result.source_language_result_sha256,
+                    ),
+                )
+                if result.source_language_manifest_sha256 is not None
+                and result.source_language_result_sha256 is not None
+                else ()
             ),
         ),
         models=(
@@ -256,9 +275,18 @@ def read_counterfactual_artifacts(
         "artifact://counterfactual-input": result.input_sha256,
         "artifact://source-decoder-manifest": result.source_decoder_manifest_sha256,
         "artifact://original-task-evaluation": result.original_task_evaluation_sha256,
+        **(
+            {
+                "artifact://source-language-manifest": (result.source_language_manifest_sha256),
+                "artifact://source-language-result": result.source_language_result_sha256,
+            }
+            if result.source_language_manifest_sha256 is not None
+            and result.source_language_result_sha256 is not None
+            else {}
+        ),
     }
     ranking_policy = load_ranking_policy()
-    ranking_payload = _canonical_json(ranking_policy.model_dump(mode="json"))
+    ranking_payload = _canonical_json(ranking_policy.model_dump(mode="python"))
     expected_models = {
         "config://bci/flash-aggregation": result.spec.aggregation.digest(),
         "config://ranking": _sha256(ranking_payload),

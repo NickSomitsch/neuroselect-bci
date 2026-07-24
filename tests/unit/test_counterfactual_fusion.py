@@ -210,6 +210,8 @@ def experiment_input(
         prepared_at=NOW,
         source_decoder_manifest_sha256="a" * 64,
         original_task_evaluation_sha256="b" * 64,
+        source_language_manifest_sha256="c" * 64,
+        source_language_result_sha256="e" * 64,
         spec=spec,
         trials=(
             fusion_trial(0, "P_03", "intended"),
@@ -300,6 +302,7 @@ def test_counterfactual_runner_executes_paired_matrix_and_marks_fixture_claims()
     assert len(result.trial_records) == 4 * len(ALL_CONDITIONS)
     assert len(result.paired_intervals) == (len(ALL_CONDITIONS) - 1) * 2
     assert result.claim_eligible is False
+    assert result.source_language_manifest_sha256 == "c" * 64
     assert result.personalization_adapters == {"controlled-profile-adapter-v1": "d" * 64}
     assert result.mapping_provenance[-1].mapped_target_candidate_id == "other"
     assert result.mapping_provenance[-1].intended_candidate_was_absent is True
@@ -556,6 +559,15 @@ def test_v2_requires_complete_messages_and_v1_inputs_remain_readable(
     legacy_result = CounterfactualFusionRunner(restored).run()
 
     legacy_digest_payload = legacy_input.model_dump(mode="json")
+    for field in (
+        "preparation_revision",
+        "preparation_config_sha256",
+        "source_language_manifest_sha256",
+        "source_language_result_sha256",
+        "source_evidence_claim_eligible",
+        "preparation_limitations",
+    ):
+        legacy_digest_payload.pop(field, None)
     for trial in legacy_digest_payload["trials"]:
         for field in (
             "synthetic_profile_id",

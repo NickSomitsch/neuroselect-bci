@@ -224,21 +224,35 @@ make p300-replay P300_REPLAY_ARGS="<epoch-directory> --checkpoint <run-directory
 Replay preserves chronological source timestamps and unknown labels and supports programmatic
 pause, seek, reset, and speed changes. It is offline replay, not live EEG acquisition.
 
-Run the paired counterfactual fusion matrix from an explicitly prepared JSON input with:
+Build the Step 4 development input from the current verified language and P300 artifacts with:
 
 ```bash
-make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input <prepared-input.json>"
+make counterfactual-input
+```
+
+This deterministically pairs one complete four-span language message with four distinct recorded
+P300 selection trials and writes canonical input plus a checksum manifest under
+`artifacts/evaluation/counterfactual-input-development-v1/`. It does not regenerate candidates,
+load Qwen, or retrain an adapter or decoder. The development recipe uses one whole message because
+the current seven labeled P300 trials cannot cover two four-span messages.
+
+Run the supported development fusion matrix with:
+
+```bash
+make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input artifacts/evaluation/counterfactual-input-development-v1/input.json --config configs/experiments/counterfactual_fusion_development.yaml --output artifacts/evaluation/counterfactual-fusion-development-v1"
 ```
 
 The runner preserves the source flash stream and changes only which visible tile occupies the
 recorded target signature. It writes result JSON, trial/mapping JSONL, metric/interval CSV, and a
-checksum manifest under `artifacts/evaluation/counterfactual-fusion-v2/`. Protocol v2 keeps the
+checksum manifest under the requested output directory. Protocol v2 keeps the
 synthetic profile and message-span identity separate from the recorded EEG subject, records
 whether the intended phrase was actually visible, and derives replay duration from the source
 flash onsets. Conditions D–F require
 an adapter ID, adapter checksum, and held-out personalization evidence. Controlled fixtures can
 exercise those mechanics but are always marked non-claim-eligible. No real counterfactual result
 is bundled because Study P data, generated language candidates, and trained adapters remain local.
+The development configuration excludes irrelevant-retrieval and no-context ablations because the
+current language artifact does not contain those alternate evidence snapshots.
 
 Run the local research API at the configured loopback address with:
 
@@ -292,7 +306,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

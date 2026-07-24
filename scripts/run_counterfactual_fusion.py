@@ -13,6 +13,9 @@ from neuroselect.evaluation import (
     load_counterfactual_spec,
     write_counterfactual_artifacts,
 )
+from neuroselect.evaluation.counterfactual_preparation import (
+    read_counterfactual_input_artifacts,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -67,7 +70,11 @@ def git_state() -> tuple[str, str | None]:
 
 def main() -> None:
     args = parse_args()
-    experiment_input = load_counterfactual_input(args.input)
+    input_manifest = args.input.parent / "manifest.json"
+    if args.input.name == "input.json" and input_manifest.exists():
+        experiment_input, _ = read_counterfactual_input_artifacts(args.input.parent)
+    else:
+        experiment_input = load_counterfactual_input(args.input)
     spec = load_counterfactual_spec(args.config)
     experiment_input = experiment_input.model_copy(update={"spec": spec})
     result = CounterfactualFusionRunner(experiment_input).run()
