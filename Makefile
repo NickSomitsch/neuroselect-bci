@@ -1,4 +1,4 @@
-.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation development-report research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
 
 setup: sync ui-install
 
@@ -29,6 +29,21 @@ language-lora:
 language-evaluation:
 	uv run --extra local-language python scripts/run_held_out_language_evaluation.py $(LANGUAGE_EVALUATION_ARGS)
 
+language-research-adapter:
+	@test -n "$(RESEARCH_PROFILE)" || (echo "RESEARCH_PROFILE is required" >&2; exit 2)
+	uv run --extra local-language python scripts/train_language_lora.py \
+		--corpus artifacts/language/personalization-v1/$(RESEARCH_PROFILE) \
+		--output artifacts/models/language-lora/$(RESEARCH_PROFILE)-research-v1 \
+		--training-config configs/models/qwen3_4b_lora.yaml \
+		$(RESEARCH_ADAPTER_ARGS)
+
+language-research-evaluation:
+	uv run --extra local-language python scripts/run_held_out_language_evaluation.py \
+		--config configs/experiments/held_out_language_personalization_research.yaml \
+		--adapter-suffix=-research-v1 \
+		--output artifacts/evaluation/held-out-language-personalization-research-v1 \
+		$(LANGUAGE_RESEARCH_EVALUATION_ARGS)
+
 fusion-smoke:
 	uv run python scripts/run_fusion_smoke.py
 
@@ -47,6 +62,24 @@ counterfactual-evaluation:
 		--config configs/experiments/counterfactual_fusion_development.yaml \
 		--output artifacts/evaluation/counterfactual-fusion-development-v1 \
 		$(COUNTERFACTUAL_EVALUATION_ARGS)
+
+counterfactual-research-input: research-readiness
+	uv run python scripts/prepare_counterfactual_input.py \
+		--language-artifacts artifacts/evaluation/held-out-language-personalization-research-v1 \
+		--preparation-config configs/experiments/counterfactual_input_research.yaml \
+		--fusion-config configs/experiments/counterfactual_fusion_research.yaml \
+		--output artifacts/evaluation/counterfactual-input-research-v1 \
+		$(COUNTERFACTUAL_RESEARCH_INPUT_ARGS)
+
+counterfactual-research-evaluation:
+	uv run python scripts/run_counterfactual_fusion.py \
+		--input artifacts/evaluation/counterfactual-input-research-v1/input.json \
+		--config configs/experiments/counterfactual_fusion_research.yaml \
+		--output artifacts/evaluation/counterfactual-fusion-research-v1 \
+		$(COUNTERFACTUAL_RESEARCH_EVALUATION_ARGS)
+
+research-readiness:
+	uv run python scripts/check_research_readiness.py $(RESEARCH_READINESS_ARGS)
 
 development-report:
 	uv run python scripts/build_research_report.py \

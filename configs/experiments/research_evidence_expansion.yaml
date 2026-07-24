@@ -1,0 +1,43 @@
+schema_version: "1.0"
+expansion_revision: full-language-balanced-p300-v2
+expansion_id: neuroselect-research-evidence-expansion-v1
+evaluated_at: 2026-07-24T12:00:00Z
+benchmark_spec: synthetic_data/benchmark.yaml
+profiles: synthetic_data/profiles
+language_evaluation_config: configs/experiments/held_out_language_personalization_research.yaml
+language_training_config: configs/models/qwen3_4b_lora.yaml
+language_model_config: configs/models/qwen3_4b_mlx.yaml
+counterfactual_preparation_config: configs/experiments/counterfactual_input_research.yaml
+counterfactual_fusion_config: configs/experiments/counterfactual_fusion_research.yaml
+adapter_root: artifacts/models/language-lora
+adapter_suffix: -research-v1
+language_artifacts: artifacts/evaluation/held-out-language-personalization-research-v1
+decoder_artifacts: artifacts/models/p300-xdawn-lda-v1
+required_profile_ids:
+  - synthetic-casual
+  - synthetic-concise
+  - synthetic-formal
+  - synthetic-reflective
+required_eeg_subject_ids:
+  - P_02
+  - P_11
+  - P_13
+required_training_eeg_subject_ids:
+  - P_01
+  - P_03
+  - P_04
+  - P_05
+  - P_07
+  - P_08
+  - P_10
+  - P_12
+  - P_14
+  - P_15
+  - P_16
+  - P_18
+  - P_19
+required_validation_eeg_subject_ids:
+  - P_06
+  - P_09
+  - P_17
+require_clean_sources: true

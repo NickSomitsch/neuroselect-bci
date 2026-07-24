@@ -52,6 +52,31 @@ separate evidence tables. The report shows target availability and conditional c
 recall and never pools the three evidence tiers. Use
 `DEVELOPMENT_REPORT_ARGS="--overwrite"` only to replace an existing local report.
 
+Audit the Steps 7–8 research protocol with:
+
+```bash
+make research-readiness RESEARCH_READINESS_ARGS="--allow-incomplete"
+```
+
+The tracked research-expansion recipe computes the complete held-out demand from source data rather
+than accepting a manually entered count. It currently resolves to 1,000 messages and 3,990 target
+spans. It then verifies the research LoRA recipe, all four profile adapters, the unlimited language
+result, clean decoder provenance, complete training/calibration/test subject coverage, balanced
+P300 capacity, the sampled input builder, and the primary A–F fusion matrix. Omit
+`--allow-incomplete` in automation that must fail unless every prerequisite is satisfied.
+
+Step 8 preregisters 144 counterfactual trials separately from the complete 3,990-span language
+evaluation. For every combination of four synthetic profiles and three held-out EEG subjects,
+seeded sampling selects three complete four-span messages. This produces 36 trials per profile and
+48 per EEG subject. Every message maps to selections from one subject; every recorded selection is
+used at most once. The source manifest records exact profile and subject counts.
+
+The current development decoder contributes seven selections from one held-out subject. The
+readiness gate therefore remains blocked until every held-out subject contributes at least 48
+usable selections and the decoder metadata verifies all preregistered training and calibration
+subjects. Counterfactual intervals remain descriptive hierarchical bootstrap summaries; three EEG
+test subjects do not support population or clinical generalization.
+
 ## Research report
 
 After producing local artifacts, run:

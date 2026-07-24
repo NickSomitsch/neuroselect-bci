@@ -43,24 +43,110 @@ class CounterfactualPreparationSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
-    preparation_revision: Literal["language-p300-paired-input-v1"] = "language-p300-paired-input-v1"
+    schema_version: Literal["1.0", "2.0"] = "1.0"
+    preparation_revision: Literal[
+        "language-p300-paired-input-v1",
+        "subject-profile-balanced-paired-input-v2",
+    ] = "language-p300-paired-input-v1"
     experiment_id: str = Field(min_length=1, max_length=160)
     seed: int = Field(default=20260724, ge=0)
     evidence_tier: Literal["development", "research"] = "development"
     maximum_messages: int | None = Field(default=1, ge=1)
     message_order: Literal["seeded-sha256-v1"] = "seeded-sha256-v1"
-    eeg_trial_order: Literal["source-selection-id-v1"] = "source-selection-id-v1"
+    eeg_trial_order: Literal[
+        "source-selection-id-v1",
+        "seeded-subject-sha256-v1",
+    ] = "source-selection-id-v1"
     layout_revision: Literal["balanced-event-signatures-v1"] = "balanced-event-signatures-v1"
+    sampling_revision: Literal[
+        "capacity-greedy-v1",
+        "subject-profile-balanced-complete-message-v1",
+    ] = "capacity-greedy-v1"
+    required_profile_ids: tuple[str, ...] = ()
+    required_eeg_subject_ids: tuple[str, ...] = ()
+    messages_per_profile_per_eeg_subject: int | None = Field(default=None, ge=1)
+    required_message_span_count: int | None = Field(default=None, ge=1)
+    inference_scope: Literal[
+        "development-only",
+        "study-p-dataset-specific-descriptive",
+    ] = "development-only"
 
     @model_validator(mode="after")
     def validate_evidence_tier(self) -> CounterfactualPreparationSpec:
-        if self.evidence_tier == "research" and self.maximum_messages is not None:
-            raise ValueError("research preparation cannot limit complete messages")
+        balanced = self.sampling_revision == "subject-profile-balanced-complete-message-v1"
+        if self.preparation_revision == "language-p300-paired-input-v1":
+            if (
+                self.schema_version != "1.0"
+                or balanced
+                or self.required_profile_ids
+                or self.required_eeg_subject_ids
+                or self.messages_per_profile_per_eeg_subject is not None
+                or self.required_message_span_count is not None
+                or self.inference_scope != "development-only"
+            ):
+                raise ValueError("v1 preparation cannot declare balanced research sampling")
+            if self.evidence_tier == "research":
+                raise ValueError("research preparation requires the balanced v2 protocol")
+            return self
+        if (
+            self.schema_version != "2.0"
+            or self.evidence_tier != "research"
+            or self.maximum_messages is not None
+            or not balanced
+            or self.eeg_trial_order != "seeded-subject-sha256-v1"
+            or not self.required_profile_ids
+            or not self.required_eeg_subject_ids
+            or self.messages_per_profile_per_eeg_subject is None
+            or self.required_message_span_count is None
+            or self.inference_scope != "study-p-dataset-specific-descriptive"
+        ):
+            raise ValueError(
+                "balanced v2 research preparation requires complete sampling parameters"
+            )
+        if len(self.required_profile_ids) != len(set(self.required_profile_ids)):
+            raise ValueError("balanced research profile IDs must be unique")
+        if len(self.required_eeg_subject_ids) != len(set(self.required_eeg_subject_ids)):
+            raise ValueError("balanced research EEG subject IDs must be unique")
         return self
 
+    @property
+    def planned_counterfactual_trial_count(self) -> int | None:
+        if self.sampling_revision != "subject-profile-balanced-complete-message-v1":
+            return None
+        assert self.messages_per_profile_per_eeg_subject is not None
+        assert self.required_message_span_count is not None
+        return (
+            len(self.required_profile_ids)
+            * len(self.required_eeg_subject_ids)
+            * self.messages_per_profile_per_eeg_subject
+            * self.required_message_span_count
+        )
+
+    @property
+    def planned_trials_per_eeg_subject(self) -> int | None:
+        if self.sampling_revision != "subject-profile-balanced-complete-message-v1":
+            return None
+        assert self.messages_per_profile_per_eeg_subject is not None
+        assert self.required_message_span_count is not None
+        return (
+            len(self.required_profile_ids)
+            * self.messages_per_profile_per_eeg_subject
+            * self.required_message_span_count
+        )
+
     def digest(self) -> str:
-        return _sha256_text(_canonical_json(self.model_dump(mode="json")))
+        payload = self.model_dump(mode="json")
+        if self.preparation_revision == "language-p300-paired-input-v1":
+            for field in (
+                "sampling_revision",
+                "required_profile_ids",
+                "required_eeg_subject_ids",
+                "messages_per_profile_per_eeg_subject",
+                "required_message_span_count",
+                "inference_scope",
+            ):
+                payload.pop(field)
+        return _sha256_text(_canonical_json(payload))
 
 
 def load_counterfactual_preparation_spec(
@@ -105,27 +191,49 @@ class CounterfactualInputBuilder:
             raise ValueError("trained language artifacts require held-out-adapter evidence")
         flash_trials = flash_trials_from_decoder_evaluation(decoder_evaluation)
         messages = self._eligible_messages(language_result)
-        selected_messages = self._select_messages(messages, len(flash_trials))
-        language_trials = tuple(trial for message in selected_messages for trial in message)
-        selected_flash_trials = flash_trials[: len(language_trials)]
+        if self.preparation_spec.sampling_revision == (
+            "subject-profile-balanced-complete-message-v1"
+        ):
+            trial_pairs = self._balanced_trial_pairs(messages, flash_trials)
+        else:
+            selected_messages = self._select_messages(messages, len(flash_trials))
+            language_trials = tuple(trial for message in selected_messages for trial in message)
+            selected_flash_trials = flash_trials[: len(language_trials)]
+            trial_pairs = tuple(zip(language_trials, selected_flash_trials, strict=True))
         prepared_trials = tuple(
             self._prepare_trial(language_trial, flash_trial)
-            for language_trial, flash_trial in zip(
-                language_trials, selected_flash_trials, strict=True
-            )
+            for language_trial, flash_trial in trial_pairs
         )
+        language_trials = tuple(pair[0] for pair in trial_pairs)
+        selected_flash_trials = tuple(pair[1] for pair in trial_pairs)
         source_claim_eligible = (
             self.preparation_spec.evidence_tier == "research"
             and self.preparation_spec.maximum_messages is None
             and language_result.claim_eligible
-            and len(language_trials) == len(language_result.trials)
-            and len(selected_flash_trials) == len(flash_trials)
+            and self.preparation_spec.planned_counterfactual_trial_count == len(language_trials)
         )
         limitations = (
             (
                 f"Mapped {len(language_trials)} of {len(language_result.trials)} language "
                 f"trials and {len(selected_flash_trials)} of {len(flash_trials)} labeled EEG "
                 "selection trials while preserving complete messages."
+            ),
+            *(
+                (
+                    "The counterfactual sample is a preregistered balanced subset; the complete "
+                    "held-out language result remains separate component evidence.",
+                )
+                if self.preparation_spec.sampling_revision
+                == "subject-profile-balanced-complete-message-v1"
+                else ()
+            ),
+            *(
+                (
+                    "Inference is limited to descriptive comparisons within this pinned Study P "
+                    "offline replay sample; it is not population or clinical inference.",
+                )
+                if self.preparation_spec.inference_scope == "study-p-dataset-specific-descriptive"
+                else ()
             ),
             (
                 "Source flash codes are occurrence-level Study P event identifiers; the source "
@@ -207,6 +315,69 @@ class CounterfactualInputBuilder:
                 ).digest(),
             )
         )
+
+    def _balanced_trial_pairs(
+        self,
+        messages: tuple[tuple[LanguageBenchmarkTrial, ...], ...],
+        flash_trials: tuple[FlashProbabilityTrial, ...],
+    ) -> tuple[tuple[LanguageBenchmarkTrial, FlashProbabilityTrial], ...]:
+        spec = self.preparation_spec
+        assert spec.messages_per_profile_per_eeg_subject is not None
+        assert spec.required_message_span_count is not None
+        assert spec.planned_trials_per_eeg_subject is not None
+        messages_by_profile: dict[str, list[tuple[LanguageBenchmarkTrial, ...]]] = defaultdict(list)
+        for message in messages:
+            if (
+                message[0].profile_id in spec.required_profile_ids
+                and len(message) == spec.required_message_span_count
+            ):
+                messages_by_profile[message[0].profile_id].append(message)
+        required_messages_per_profile = (
+            len(spec.required_eeg_subject_ids) * spec.messages_per_profile_per_eeg_subject
+        )
+        for profile_id in spec.required_profile_ids:
+            available = len(messages_by_profile[profile_id])
+            if available < required_messages_per_profile:
+                raise ValueError(
+                    f"profile {profile_id} provides {available} eligible complete messages; "
+                    f"balanced sampling requires {required_messages_per_profile}"
+                )
+
+        trials_by_subject: dict[str, list[FlashProbabilityTrial]] = defaultdict(list)
+        for flash_trial in flash_trials:
+            if flash_trial.subject_id in spec.required_eeg_subject_ids:
+                trials_by_subject[flash_trial.subject_id].append(flash_trial)
+        for subject_id in spec.required_eeg_subject_ids:
+            trials_by_subject[subject_id].sort(
+                key=lambda trial: hashlib.sha256(
+                    (
+                        f"{spec.seed}:{subject_id}:{trial.session_id}:{trial.selection_trial_id}"
+                    ).encode()
+                ).digest()
+            )
+            available = len(trials_by_subject[subject_id])
+            if available < spec.planned_trials_per_eeg_subject:
+                raise ValueError(
+                    f"EEG subject {subject_id} provides {available} usable selection trials; "
+                    f"balanced sampling requires {spec.planned_trials_per_eeg_subject}"
+                )
+
+        pairs: list[tuple[LanguageBenchmarkTrial, FlashProbabilityTrial]] = []
+        for subject_index, subject_id in enumerate(spec.required_eeg_subject_ids):
+            subject_language_trials: list[LanguageBenchmarkTrial] = []
+            message_start = subject_index * spec.messages_per_profile_per_eeg_subject
+            message_stop = message_start + spec.messages_per_profile_per_eeg_subject
+            for profile_id in spec.required_profile_ids:
+                selected = messages_by_profile[profile_id][message_start:message_stop]
+                subject_language_trials.extend(trial for message in selected for trial in message)
+            selected_flash_trials = trials_by_subject[subject_id][
+                : spec.planned_trials_per_eeg_subject
+            ]
+            pairs.extend(zip(subject_language_trials, selected_flash_trials, strict=True))
+        assert spec.planned_counterfactual_trial_count is not None
+        if len(pairs) != spec.planned_counterfactual_trial_count:
+            raise ValueError("balanced counterfactual sample size does not match its protocol")
+        return tuple(pairs)
 
     def _select_messages(
         self,
@@ -359,6 +530,11 @@ def write_counterfactual_input_artifacts(
     input_content = experiment_input.canonical_json() + "\n"
     input_path.write_text(input_content, encoding="utf-8")
     captured_packages, captured_device = capture_runtime_environment()
+    profile_trial_counts: dict[str, int] = defaultdict(int)
+    eeg_subject_trial_counts: dict[str, int] = defaultdict(int)
+    for trial in experiment_input.trials:
+        profile_trial_counts[trial.resolved_profile_id] += 1
+        eeg_subject_trial_counts[trial.flash_trial.subject_id] += 1
     adapters = {
         trial.personalization_adapter_id: trial.personalization_adapter_sha256
         for trial in experiment_input.trials
@@ -420,6 +596,10 @@ def write_counterfactual_input_artifacts(
             "claim_eligible": experiment_input.source_evidence_claim_eligible,
             "input_sha256": experiment_input.digest(),
             "source_trial_count": len(experiment_input.trials),
+            "sampling_revision": preparation_spec.sampling_revision,
+            "inference_scope": preparation_spec.inference_scope,
+            "profile_trial_counts": dict(sorted(profile_trial_counts.items())),
+            "eeg_subject_trial_counts": dict(sorted(eeg_subject_trial_counts.items())),
             "working_tree_dirty": source_tree_sha256 is not None,
             **(
                 {"source_tree_sha256": source_tree_sha256} if source_tree_sha256 is not None else {}
@@ -467,6 +647,24 @@ def read_counterfactual_input_artifacts(
         if trial.personalization_adapter_id is not None
         and trial.personalization_adapter_sha256 is not None
     }
+    profile_trial_counts: dict[str, int] = defaultdict(int)
+    eeg_subject_trial_counts: dict[str, int] = defaultdict(int)
+    for trial in experiment_input.trials:
+        profile_trial_counts[trial.resolved_profile_id] += 1
+        eeg_subject_trial_counts[trial.flash_trial.subject_id] += 1
+    balanced_v2 = (
+        experiment_input.preparation_revision == "subject-profile-balanced-paired-input-v2"
+    )
+    balanced_metadata_valid = not balanced_v2 or (
+        manifest.metadata.get("sampling_revision") == "subject-profile-balanced-complete-message-v1"
+        and manifest.metadata.get("inference_scope") == "study-p-dataset-specific-descriptive"
+        and manifest.metadata.get("profile_trial_counts")
+        == dict(sorted(profile_trial_counts.items()))
+        and manifest.metadata.get("eeg_subject_trial_counts")
+        == dict(sorted(eeg_subject_trial_counts.items()))
+        and len(set(profile_trial_counts.values())) == 1
+        and len(set(eeg_subject_trial_counts.values())) == 1
+    )
     if (
         manifest.run_kind is not RunKind.COMPONENT_EVALUATION
         or manifest.status is not RunStatus.COMPLETED
@@ -477,6 +675,7 @@ def read_counterfactual_input_artifacts(
         or manifest.metadata.get("input_sha256") != experiment_input.digest()
         or manifest.metadata.get("claim_eligible")
         is not experiment_input.source_evidence_claim_eligible
+        or not balanced_metadata_valid
     ):
         raise ValueError("counterfactual input manifest does not agree with the input")
     return experiment_input, manifest

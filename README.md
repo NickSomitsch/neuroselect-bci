@@ -293,6 +293,48 @@ counterfactual artifacts. It verifies every source and writes separate evidence 
 recall are shown explicitly beside counterfactual top-k values. Add
 `DEVELOPMENT_REPORT_ARGS="--overwrite"` when intentionally replacing an existing local report.
 
+## Steps 7–8 research evidence protocol
+
+Audit the exact research-grade prerequisites before starting long model or data jobs:
+
+```bash
+make research-readiness RESEARCH_READINESS_ARGS="--allow-incomplete"
+```
+
+The readiness command writes a machine-readable result under `artifacts/reports/` and checks all
+of the following together:
+
+- four checksum-verified adapters trained with the research LoRA recipe, including validation and
+  test evaluation;
+- the complete 1,000-message held-out language test split, containing 3,990 target spans, with no
+  development message limit;
+- clean, checksum-verified decoder training over all 13 training subjects, calibration over all
+  three validation subjects, and evaluation over held-out subjects `P_02`, `P_11`, and `P_13`;
+- a preregistered counterfactual sample of 144 distinct P300 selections, with exactly 48 per EEG
+  subject and 36 per synthetic profile; and
+- the balanced research input recipe and primary A–F fusion matrix.
+
+Without `--allow-incomplete`, the command exits with status 2 whenever any requirement is missing.
+This fail-closed behavior prevents limited development artifacts from being relabeled as research
+evidence.
+
+Step 8 separates the evidence denominators instead of trying to pair all 3,990 language spans.
+The full language result remains mandatory component evidence. Counterfactual replay deterministically
+selects three complete four-span messages for every synthetic-profile/EEG-subject cell: four
+profiles × three subjects × three messages × four spans = 144 trials. Each complete message stays
+within one EEG subject, source selections are never reused, and seeded hashing fixes both language
+and EEG selection.
+
+The current local audit is expected to remain incomplete: the development decoder contains seven
+usable selections from `P_02`, rather than 48 each from all three test subjects; it was trained
+with only `P_01` and calibrated with only `P_06`; the four research adapters and full language
+result are also absent. Step 9 must build the complete preregistered Study P decoder evidence.
+
+The tracked `language-research-adapter`, `language-research-evaluation`,
+`counterfactual-research-input`, and `counterfactual-research-evaluation` targets provide exact
+building blocks for the protocol. `counterfactual-research-input` runs the strict readiness gate
+first and never synthesizes missing P300 evidence.
+
 ## Research release workflow
 
 Build the evidence-separated report from available verified artifacts with:
@@ -324,7 +366,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

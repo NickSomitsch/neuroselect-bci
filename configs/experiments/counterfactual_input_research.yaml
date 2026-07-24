@@ -1,0 +1,22 @@
+schema_version: "2.0"
+preparation_revision: subject-profile-balanced-paired-input-v2
+experiment_id: counterfactual-input-research-v1
+seed: 20260724
+evidence_tier: research
+maximum_messages: null
+message_order: seeded-sha256-v1
+eeg_trial_order: seeded-subject-sha256-v1
+layout_revision: balanced-event-signatures-v1
+sampling_revision: subject-profile-balanced-complete-message-v1
+required_profile_ids:
+  - synthetic-casual
+  - synthetic-concise
+  - synthetic-formal
+  - synthetic-reflective
+required_eeg_subject_ids:
+  - P_02
+  - P_11
+  - P_13
+messages_per_profile_per_eeg_subject: 3
+required_message_span_count: 4
+inference_scope: study-p-dataset-specific-descriptive
