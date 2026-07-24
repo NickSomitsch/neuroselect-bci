@@ -14,4 +14,6 @@
 
 ## Consequences
 
-FastAPI, MNE, MOABB, PyTorch, MLX-LM, and sentence-transformers are intentionally deferred until the phases that exercise them. This keeps the foundation fast to install and avoids platform-specific failures before relevant functionality exists.
+Platform-specific dependencies are introduced only by the phases that exercise them. MLX-LM is
+now available through the optional `local-language` extra under ADR 0017; default setup, tests,
+and continuous integration still do not install it or download model weights.

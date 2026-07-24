@@ -12,8 +12,9 @@ speech, identity, diagnosis, or private intent from scalp EEG.
   accuracy are not word accuracy, message accuracy, or clinical communication speed.
 - Counterfactual replay maps a recorded target position to a candidate tile. The source participant
   did not select or endorse the displayed word.
-- The repository contains no complete all-subject Study P result, real held-out language-model
-  LoRA, claim-eligible A–F fusion result, live EEG result, or participant usability study.
+- The repository contains no complete all-subject Study P result, bundled trained language-model
+  LoRA, claim-eligible A–F fusion result, live EEG result, or participant usability study. The
+  implemented LoRA workflow is not evidence until it is run and its local artifacts are evaluated.
 - Modeled interaction time is not wall-clock latency or measured user speed. Hierarchical
   bootstrap intervals are descriptive and do not establish efficacy or non-inferiority.
 
@@ -24,10 +25,13 @@ Study P condition order may confound chronological session comparisons. Dataset 
 metadata do not justify broader clinical-status inferences. Small subject-specific adapters can be
 unstable, and hardware/runtime differences can affect neural training despite fixed seeds.
 
-The fixture language backend is deterministic and intentionally limited. Personal retrieval is
-lexical rather than semantic, and lexical injection screening is not a complete content-safety or
-privacy classifier. Candidate risk tags cover a narrow tracked vocabulary and cannot identify all
-medical, financial, legal, consent, coercion, or emergency content.
+The fixture language backend and controlled style proxy are deterministic and intentionally
+limited. The optional Qwen backend is Apple-silicon-specific, its relative phrase support is not a
+calibrated intent probability, and fixed decoding may still vary across runtime/hardware versions.
+Personal retrieval is lexical rather than semantic, and lexical injection screening is not a
+complete content-safety or privacy classifier. Candidate risk tags cover a narrow tracked
+vocabulary and cannot identify all medical, financial, legal, consent, coercion, or emergency
+content.
 
 ## System limitations
 

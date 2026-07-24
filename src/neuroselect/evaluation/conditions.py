@@ -17,7 +17,8 @@ def condition_catalog() -> tuple[ConditionDefinition, ...]:
     """Return every planned condition, including honest dependency-gated entries."""
 
     unavailable_lora = (
-        "A real personal LoRA adapter and held-out adapter evaluation are not implemented yet."
+        "This fixture recipe has no locally trained, checksum-verified personal LoRA artifact; "
+        "the optional training workflow must be run and supplied explicitly."
     )
     return (
         ConditionDefinition(
@@ -85,7 +86,7 @@ def condition_catalog() -> tuple[ConditionDefinition, ...]:
             personalization_enabled=True,
             safeguards_enabled=True,
             unavailable_reason=(
-                "The complete condition requires a real held-out LoRA and a prepared "
+                "The complete condition requires a locally trained held-out LoRA and a prepared "
                 "counterfactual input from a calibrated P300 decoder; the seeded simulator "
                 "does not provide those artifacts."
             ),

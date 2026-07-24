@@ -71,7 +71,8 @@ dataset evaluation is run.
 - Subject adaptation estimates can be unstable with few selection trials and must never expand to
   full-layer fine-tuning under this protocol.
 - Counterfactual fusion has not been run across the pinned real-data split in this checkout, and a
-  real held-out language-model LoRA is not yet available for conditions D–F.
+  trained held-out language-model LoRA artifact is not bundled for conditions D–F. The optional
+  local trainer and adapter verifier do not by themselves establish a personalization benefit.
 - The model does not provide automatic selection; downstream use must retain repeat, abstention,
   and explicit-confirmation safeguards.
 

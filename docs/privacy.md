@@ -26,9 +26,10 @@ to the local terminal; do not enable verbose request-body logging when working w
 
 Personal knowledge can be added, disabled, replaced, or physically deleted through the storage
 layer. Raw datasets, derived EEG, reports, and checkpoints are ordinary local files and must be
-deleted by the operator together with backups. A language-model LoRA importer/trainer is not yet
-implemented; no adapter-deletion claim is made. Future adapter support must provide replacement
-and deletion before it can accept personal text.
+deleted by the operator together with backups. Prepared language corpora and LoRA adapters are
+also ordinary ignored local files; the operator must remove their directories and backups to
+delete them. The tracked workflow uses only public synthetic profiles by default and must not be
+used with personal text without a separate consent, retention, replacement, and deletion process.
 
 ## Sharing and retention
 

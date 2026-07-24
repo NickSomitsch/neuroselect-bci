@@ -17,6 +17,10 @@ synthetic evaluation assets:
 - A seeded, call-order-independent neural probability simulator.
 - A structured deterministic candidate generator with deduplication, explicit controls, and an
   application-owned versioned lexical risk policy.
+- An optional revision-pinned Qwen/MLX backend that replaces model-reported support with complete
+  phrase log-likelihood scoring, plus checksum-verified LoRA adapter loading.
+- Leakage-separated synthetic style corpora, a local MLX QLoRA training wrapper, and
+  candidate-aligned style/RAG evidence with a clearly non-claim-eligible controlled proxy.
 - A local SQLite personal-knowledge store with safe lexical retrieval and provenance.
 - A transparent fusion ranker with LM-dominance, repeat, abstention, and risk safeguards.
 - A loopback session API with manual/simulated rounds and explicit confirmation boundaries.
@@ -88,6 +92,44 @@ Personal records are profile-scoped, revisioned, permissioned, and physically de
 Disabled, expired, not-yet-valid, and prompt-injection-flagged records cannot influence
 suggestions. Retrieved records retain their source and matched terms for visible explanations.
 
+Run the complete Step 2 mechanics without downloading a model:
+
+```bash
+make language-smoke
+```
+
+This keeps the visible fixture candidates fixed and emits separate generic-language,
+controlled-style, and synthetic-RAG signals. The style proxy is explicitly marked
+`controlled_fixture` and cannot support a LoRA-benefit claim.
+
+Prepare split-safe MLX completion corpora for all four synthetic profiles:
+
+```bash
+make language-personalization-data
+```
+
+To use the real local backend on Apple silicon, install the optional dependency, then explicitly
+allow the first download of the pinned Qwen revision:
+
+```bash
+make local-language-sync
+uv run --extra local-language python scripts/run_personalized_language.py \
+  "I would like" --backend mlx --download
+```
+
+Train one QLoRA adapter from a prepared profile corpus:
+
+```bash
+make language-lora LANGUAGE_LORA_ARGS="\
+  --corpus artifacts/language/personalization-v1/synthetic-concise \
+  --output artifacts/models/language-lora/synthetic-concise \
+  --download"
+```
+
+Training validates every corpus checksum, masks the prompt loss, evaluates the held-out synthetic
+test split, and writes a checksum-addressed adapter manifest. Model weights, corpora, and adapters
+remain ignored local artifacts; setup and CI never download them.
+
 Run the current CPU-only candidate → RAG → simulated-neural → fusion slice with:
 
 ```bash
@@ -107,10 +149,11 @@ make simulated-evaluation
 This writes ignored `trials.jsonl`, `metrics.json`, and `manifest.json` artifacts under
 `artifacts/evaluation/simulated-vertical-slice-v2/`. The controlled protocol keeps the intended
 span visible to isolate fusion behavior; it does not measure unconstrained language-generation
-recall or real EEG performance. Planned LoRA and complete calibrated-system conditions are listed
-but cannot run until those components have real held-out implementations. Full conversation-
-context removal is likewise dependency-gated until a context-sensitive language backend exists;
-the runnable proxy removes confirmed context from retrieval queries and labels that scope exactly.
+recall or real EEG performance. LoRA and complete calibrated-system conditions remain unavailable
+in this fixture recipe because it does not load a locally trained adapter or real decoder
+artifacts. Full conversation-context removal remains dependency-gated in this recipe; its
+retrieval-context proxy removes confirmed context only from retrieval queries and labels that
+scope exactly.
 
 Review the Study P dataset card and explicitly prepare a one-recording smoke slice with:
 
@@ -169,11 +212,13 @@ make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input <prepared-input.j
 
 The runner preserves the source flash stream and changes only which visible tile occupies the
 recorded target signature. It writes result JSON, trial/mapping JSONL, metric/interval CSV, and a
-checksum manifest under `artifacts/evaluation/counterfactual-fusion-v1/`. Conditions D–F require
+checksum manifest under `artifacts/evaluation/counterfactual-fusion-v2/`. Protocol v2 keeps the
+synthetic profile and message-span identity separate from the recorded EEG subject, records
+whether the intended phrase was actually visible, and derives replay duration from the source
+flash onsets. Conditions D–F require
 an adapter ID, adapter checksum, and held-out personalization evidence. Controlled fixtures can
 exercise those mechanics but are always marked non-claim-eligible. No real counterfactual result
-is bundled because Study P data and trained artifacts remain local and no language-model LoRA is
-implemented in this checkout.
+is bundled because Study P data, generated language candidates, and trained adapters remain local.
 
 Run the local research API at the configured loopback address with:
 

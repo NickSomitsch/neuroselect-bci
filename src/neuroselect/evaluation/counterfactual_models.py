@@ -43,11 +43,12 @@ class CounterfactualFusionSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "2.0"
     experiment_id: str = Field(min_length=1, max_length=160)
-    protocol_revision: Literal["offline-counterfactual-fusion-v1"] = (
-        "offline-counterfactual-fusion-v1"
-    )
+    protocol_revision: Literal[
+        "offline-counterfactual-fusion-v1",
+        "offline-counterfactual-fusion-v2",
+    ] = "offline-counterfactual-fusion-v2"
     seed: int = Field(default=20260721, ge=0)
     conditions: tuple[EvaluationCondition, ...] = Field(min_length=1)
     calibration_bins: int = Field(default=10, ge=2, le=50)
@@ -59,6 +60,9 @@ class CounterfactualFusionSpec(BaseModel):
 
     @model_validator(mode="after")
     def validate_conditions(self) -> CounterfactualFusionSpec:
+        expected_protocol = f"offline-counterfactual-fusion-v{self.schema_version[0]}"
+        if self.protocol_revision != expected_protocol:
+            raise ValueError("counterfactual schema version and protocol revision must agree")
         if len(self.conditions) != len(set(self.conditions)):
             raise ValueError("counterfactual conditions must be unique")
         unsupported = set(self.conditions) - COUNTERFACTUAL_CONDITIONS
@@ -79,11 +83,17 @@ class CounterfactualFusionTrial(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     trial_id: str = Field(min_length=1, max_length=160)
+    synthetic_profile_id: str | None = Field(default=None, min_length=1, max_length=160)
+    message_id: str | None = Field(default=None, min_length=1, max_length=160)
+    span_index: int | None = Field(default=None, ge=0)
+    message_span_count: int | None = Field(default=None, ge=1)
     candidate_set: CandidateSet
     flash_layout: FlashLayout
     flash_trial: FlashProbabilityTrial
+    intended_text: str | None = Field(default=None, min_length=1, max_length=160)
     intended_candidate_id: str | None = None
     other_candidate_id: str = Field(min_length=1, max_length=128)
+    candidate_generation_failed: bool = False
     confirmed_context: str = Field(default="", max_length=4_000)
     generic_language_support: dict[str, float]
     no_context_language_support: dict[str, float] | None = None
@@ -113,6 +123,32 @@ class CounterfactualFusionTrial(BaseModel):
         )
         if other.kind is not CandidateKind.CONTROL or other.text.casefold() != "other":
             raise ValueError("other_candidate_id must identify the visible Other control")
+        if self.intended_candidate_id is not None and self.intended_text is not None:
+            intended_candidate = next(
+                item
+                for item in self.candidate_set.candidates
+                if item.candidate_id == self.intended_candidate_id
+            )
+            if " ".join(intended_candidate.text.casefold().split()) != " ".join(
+                self.intended_text.casefold().split()
+            ):
+                raise ValueError("intended text must match the visible intended candidate")
+        message_values = (
+            self.synthetic_profile_id,
+            self.message_id,
+            self.span_index,
+            self.message_span_count,
+        )
+        if any(value is None for value in message_values) and not all(
+            value is None for value in message_values
+        ):
+            raise ValueError("message and synthetic-profile provenance must be present together")
+        if (
+            self.span_index is not None
+            and self.message_span_count is not None
+            and self.span_index >= self.message_span_count
+        ):
+            raise ValueError("span_index must be smaller than message_span_count")
         language_ids = {
             item.candidate_id
             for item in self.candidate_set.candidates
@@ -157,13 +193,36 @@ class CounterfactualFusionTrial(BaseModel):
     def resolved_target_candidate_id(self) -> str:
         return self.intended_candidate_id or self.other_candidate_id
 
+    @property
+    def target_available(self) -> bool:
+        return self.intended_candidate_id is not None
+
+    @property
+    def resolved_profile_id(self) -> str:
+        return self.synthetic_profile_id or self.flash_trial.subject_id
+
+    @property
+    def resolved_message_id(self) -> str:
+        return self.message_id or self.trial_id
+
+    @property
+    def resolved_intended_text(self) -> str:
+        if self.intended_text is not None:
+            return self.intended_text
+        candidate = next(
+            item
+            for item in self.candidate_set.candidates
+            if item.candidate_id == self.resolved_target_candidate_id
+        )
+        return candidate.text
+
 
 class CounterfactualExperimentInput(BaseModel):
     """Portable, checksum-addressable input to a replay/fusion run."""
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "2.0"
     prepared_at: datetime
     source_decoder_manifest_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     original_task_evaluation_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -172,6 +231,8 @@ class CounterfactualExperimentInput(BaseModel):
 
     @model_validator(mode="after")
     def validate_input(self) -> CounterfactualExperimentInput:
+        if self.schema_version != self.spec.schema_version:
+            raise ValueError("counterfactual input and specification schema versions must agree")
         if self.prepared_at.tzinfo is None or self.prepared_at.utcoffset() is None:
             raise ValueError("counterfactual input preparation time must include a timezone")
         identifiers = [trial.trial_id for trial in self.trials]
@@ -189,6 +250,42 @@ class CounterfactualExperimentInput(BaseModel):
             raise ValueError("one recorded selection trial may be mapped only once per input")
         if len({len(trial.candidate_set.candidates) for trial in self.trials}) != 1:
             raise ValueError("paired counterfactual trials must use one fixed candidate count")
+        if self.schema_version == "2.0":
+            incomplete = [
+                trial.trial_id
+                for trial in self.trials
+                if trial.synthetic_profile_id is None
+                or trial.message_id is None
+                or trial.span_index is None
+                or trial.message_span_count is None
+                or trial.intended_text is None
+            ]
+            if incomplete:
+                raise ValueError(
+                    "v2 counterfactual trials require target, message, and profile provenance: "
+                    f"{incomplete[:3]}"
+                )
+            message_spans: dict[tuple[str, str], set[int]] = {}
+            message_counts: dict[tuple[str, str], set[int]] = {}
+            for trial in self.trials:
+                assert trial.synthetic_profile_id is not None
+                assert trial.message_id is not None
+                assert trial.span_index is not None
+                assert trial.message_span_count is not None
+                key = trial.synthetic_profile_id, trial.message_id
+                message_spans.setdefault(key, set()).add(trial.span_index)
+                message_counts.setdefault(key, set()).add(trial.message_span_count)
+            incomplete_messages = [
+                key
+                for key, spans in message_spans.items()
+                if len(message_counts[key]) != 1
+                or spans != set(range(next(iter(message_counts[key]))))
+            ]
+            if incomplete_messages:
+                raise ValueError(
+                    "v2 counterfactual inputs must contain every span for each message: "
+                    f"{incomplete_messages[:3]}"
+                )
         adapter_hashes: dict[str, set[str]] = {}
         for trial in self.trials:
             if (
@@ -204,6 +301,18 @@ class CounterfactualExperimentInput(BaseModel):
 
     def digest(self) -> str:
         payload = self.model_dump(mode="json")
+        if self.schema_version == "1.0":
+            v2_trial_fields = (
+                "synthetic_profile_id",
+                "message_id",
+                "span_index",
+                "message_span_count",
+                "intended_text",
+                "candidate_generation_failed",
+            )
+            for trial in payload["trials"]:
+                for field in v2_trial_fields:
+                    trial.pop(field, None)
         return hashlib.sha256(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
         ).hexdigest()
@@ -217,11 +326,19 @@ class CounterfactualTrialProvenance(BaseModel):
     source_trial_id: str
     subject_id: str
     session_id: str
+    synthetic_profile_id: str | None = None
+    message_id: str | None = None
+    span_index: int | None = Field(default=None, ge=0)
+    message_span_count: int | None = Field(default=None, ge=1)
+    intended_text: str | None = Field(default=None, min_length=1, max_length=160)
+    intended_candidate_id: str | None = None
     event_ids: tuple[str, ...] = Field(min_length=2)
     event_onsets_seconds: tuple[float, ...] = Field(min_length=2)
     recorded_target_codes: tuple[int, ...] = Field(min_length=1)
     mapped_target_candidate_id: str
     intended_candidate_was_absent: bool
+    fallback_candidate_id: str | None = None
+    source_flash_duration_seconds: float | None = Field(default=None, gt=0.0)
     source_layout_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     mapped_layout_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     neural_evidence_id: str
@@ -255,7 +372,7 @@ class CounterfactualFusionResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal["1.0"] = "1.0"
+    schema_version: Literal["1.0", "2.0"] = "2.0"
     run_id: str = Field(min_length=1, max_length=160)
     generated_at: datetime
     config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -273,6 +390,8 @@ class CounterfactualFusionResult(BaseModel):
 
     @model_validator(mode="after")
     def validate_result(self) -> CounterfactualFusionResult:
+        if self.schema_version != self.spec.schema_version:
+            raise ValueError("counterfactual result and specification schema versions must agree")
         if self.generated_at.tzinfo is None or self.generated_at.utcoffset() is None:
             raise ValueError("counterfactual result time must include a timezone")
         if self.config_sha256 != self.spec.digest():

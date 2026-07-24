@@ -78,7 +78,7 @@ def test_runtime_environment_preserves_torch_build_version(
     assert package_versions["torch"] == "2.13.0+cu130"
 
 
-def test_condition_catalog_keeps_unimplemented_lora_and_complete_runs_unavailable() -> None:
+def test_condition_catalog_keeps_artifact_gated_lora_and_complete_runs_unavailable() -> None:
     catalog = condition_catalog()
 
     assert {item.condition for item in catalog} == set(EvaluationCondition)

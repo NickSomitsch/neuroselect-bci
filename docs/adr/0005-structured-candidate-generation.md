@@ -24,9 +24,8 @@
   on every result.
 - Keep generation pure with respect to the message session. A candidate remains provisional
   until a separate explicit selection action confirms it.
-- Ship a deterministic YAML fixture backend for tests and CPU-only development. The Qwen/MLX
-  adapter and constrained-decoding integration remain deferred until model dependencies are
-  introduced.
+- Ship a deterministic YAML fixture backend for tests and CPU-only development. ADR 0017 adds the
+  optional Qwen/MLX adapter while retaining this fixture as the offline default.
 
 ## Consequences
 
@@ -34,3 +33,5 @@ The fixture backend is not a language-model quality baseline, but it makes candi
 API contracts, and later ranking experiments reproducible without downloading model weights.
 Structured prompting may not expose exact token likelihoods; later model adapters must document
 how relative support is obtained and must retain an LM-only baseline for comparison.
+ADR 0017 resolves that requirement by rescoring each complete proposed phrase with mean
+continuation token log likelihood instead of trusting support numbers emitted in JSON.

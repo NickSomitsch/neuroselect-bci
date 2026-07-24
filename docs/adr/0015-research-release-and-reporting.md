@@ -36,5 +36,6 @@ successful source/wheel build.
 
 The repository can produce an auditable engineering report today and incorporate real local
 artifacts later without changing their evidence meaning. A dirty or incomplete report is still
-useful for development, but cannot pass the release-ready gate. No all-subject Study P, real LoRA,
-counterfactual, live-BCI, clinical, or human-subject result is created by this reporting layer.
+useful for development, but cannot pass the release-ready gate. No all-subject Study P, trained
+LoRA, counterfactual, live-BCI, clinical, or human-subject result is created by this reporting
+layer.

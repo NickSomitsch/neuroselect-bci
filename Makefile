@@ -1,9 +1,12 @@
-.PHONY: setup sync ui-install synthetic-data synthetic-knowledge fusion-smoke simulated-evaluation counterfactual-fusion research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora fusion-smoke simulated-evaluation counterfactual-fusion research-report release-check release study-p-data p300-baseline p300-eegnet p300-replay api format format-check lint typecheck test build package verify
 
 setup: sync ui-install
 
 sync:
 	uv sync --all-groups --locked
+
+local-language-sync:
+	uv sync --all-groups --extra local-language --locked
 
 ui-install:
 	pnpm --dir ui install --frozen-lockfile
@@ -13,6 +16,15 @@ synthetic-data:
 
 synthetic-knowledge:
 	uv run python scripts/initialize_synthetic_knowledge.py --replace
+
+language-personalization-data:
+	uv run python scripts/prepare_language_personalization.py
+
+language-smoke:
+	uv run python scripts/run_personalized_language.py
+
+language-lora:
+	uv run --extra local-language python scripts/train_language_lora.py $(LANGUAGE_LORA_ARGS)
 
 fusion-smoke:
 	uv run python scripts/run_fusion_smoke.py

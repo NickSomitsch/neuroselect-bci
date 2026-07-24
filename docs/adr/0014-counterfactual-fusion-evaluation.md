@@ -72,8 +72,11 @@ supporting research claims. The implementation does not convert Study P into obs
 intent and never permits automatic selection.
 
 No complete real-data counterfactual result is checked into the repository: Study P data and model
-artifacts are intentionally local, and a real language-model LoRA has not yet been implemented.
+artifacts are intentionally local, and no trained language-model LoRA is bundled. ADR 0017
+provides the local training and verified-loading path without turning an unrun workflow into
+evidence.
 Personalization-data-quantity, candidate-count, fusion-weight, stale-retrieval, unseen-vocabulary,
 and profile-mismatch sweeps therefore remain dependency-gated follow-on analyses. Results from
-those sweeps must use explicit tracked configurations and must not be inferred from the v1 paired
-matrix.
+those sweeps must use explicit tracked configurations. ADR 0016 amends the trial and metric
+provenance for protocol v2; v1 artifacts remain readable but must not be used for absent-target
+availability claims.

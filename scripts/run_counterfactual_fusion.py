@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("artifacts/evaluation/counterfactual-fusion-v1"),
+        default=Path("artifacts/evaluation/counterfactual-fusion-v2"),
     )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()

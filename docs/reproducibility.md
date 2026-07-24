@@ -26,6 +26,14 @@ Run the public controlled matrix with `make simulated-evaluation`. Study P and d
 documented in the README and require explicit local data preparation. Data-author `Train`/`Test`
 folders are not model splits. Unknown labels never enter supervised metrics.
 
+Prepare deterministic synthetic personalization corpora with
+`make language-personalization-data`. Each profile directory contains MLX-compatible train,
+validation, and test files plus a checksum manifest. The default `make language-smoke` path uses a
+controlled style proxy and must not be reported as LoRA evidence. Real local runs require
+`make local-language-sync`, the exact pinned Qwen revision, and a separately checksum-verified
+adapter produced by `make language-lora`; keep the base-model and adapter identities in every
+downstream artifact.
+
 ## Research report
 
 After producing local artifacts, run:

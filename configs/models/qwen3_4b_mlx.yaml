@@ -1,9 +1,19 @@
-model_id: Qwen/Qwen3-4B-MLX-4bit
+schema_version: "1.0"
 backend: mlx-lm
+backend_id: mlx-lm-qwen3-4b
+model_id: Qwen/Qwen3-4B-MLX-4bit
+model_revision: 52a5ab34fa604bc8af6d3ce0cac0cab10b7eb495
 license: Apache-2.0
-revision: null
 download_enabled: false
+deterministic: false
+generator_revision: mlx-structured-candidates-v1
+prompt_revision: structured-next-span-qwen3-v1
 generation:
   enable_thinking: false
   temperature: 0.0
-  maximum_phrase_tokens: 4
+  maximum_new_tokens: 512
+  proposal_multiplier: 2
+  minimum_proposals: 12
+scoring:
+  method: mean-token-log-likelihood
+  softmax_temperature: 1.0

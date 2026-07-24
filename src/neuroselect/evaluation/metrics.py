@@ -42,25 +42,46 @@ def _one_slice(
     calibration_bins: int,
     profile_id: str | None,
 ) -> ConditionMetrics:
-    message_records: dict[str, list[TrialRecord]] = defaultdict(list)
+    message_records: dict[tuple[str, str], list[TrialRecord]] = defaultdict(list)
     for record in records:
-        message_records[record.message_id].append(record)
-    completed_message_ids = {
-        message_id
-        for message_id, values in message_records.items()
+        message_records[(record.profile_id, record.message_id)].append(record)
+    for message_key, values in message_records.items():
+        expected_counts = {record.message_span_count for record in values}
+        indices = {record.span_index for record in values}
+        if len(expected_counts) != 1:
+            raise ValueError(f"message has inconsistent span counts: {message_key}")
+        expected_count = next(iter(expected_counts))
+        if len(values) != expected_count or indices != set(range(expected_count)):
+            raise ValueError(f"message does not contain every expected span: {message_key}")
+    completed_message_ids = frozenset(
+        message_key
+        for message_key, values in message_records.items()
         if all(record.explicit_selection_completed for record in values)
-    }
+    )
     completed_records = tuple(record for record in records if record.explicit_selection_completed)
+    available_records = tuple(record for record in records if record.target_available)
+    fallback_records = tuple(record for record in records if not record.target_available)
+    displayed_records = tuple(
+        record for record in records if record.disposition is RankingDisposition.DISPLAY
+    )
+    selection_savings = tuple(
+        record.selection_savings for record in records if record.selection_savings is not None
+    )
     total_duration = sum(record.modeled_duration_seconds for record in records)
     completed_actions = sum(
-        record.explicit_action_count
+        record.modeled_selection_count
         for record in records
-        if record.message_id in completed_message_ids
+        if (record.profile_id, record.message_id) in completed_message_ids
     )
     conflict_records = tuple(record for record in records if record.language_conflict_context)
     brier_values = tuple(
         record.neural_brier_score for record in records if record.neural_brier_score is not None
     )
+    correct_displays = sum(
+        record.top_1_correct if record.target_available else record.fallback_selected
+        for record in displayed_records
+    )
+    display_accuracy = correct_displays / len(displayed_records) if displayed_records else None
 
     return ConditionMetrics(
         condition=condition,
@@ -69,9 +90,30 @@ def _one_slice(
         message_count=len(message_records),
         completed_trial_count=len(completed_records),
         completed_message_count=len(completed_message_ids),
+        available_trial_count=len(available_records),
+        fallback_trial_count=len(fallback_records),
+        displayed_trial_count=len(displayed_records),
+        candidate_generation_failure_count=sum(
+            record.candidate_generation_failed for record in records
+        ),
         target_availability_rate=_rate(record.target_available for record in records),
         top_1_candidate_recall=_rate(record.top_1_correct for record in records),
         top_3_candidate_recall=_rate(record.top_3_correct for record in records),
+        top_1_recall_given_available=(
+            _rate(record.top_1_correct for record in available_records)
+            if available_records
+            else None
+        ),
+        top_3_recall_given_available=(
+            _rate(record.top_3_correct for record in available_records)
+            if available_records
+            else None
+        ),
+        other_fallback_success_rate=(
+            _rate(record.fallback_selection_completed for record in fallback_records)
+            if fallback_records
+            else None
+        ),
         selection_completion_rate=len(completed_records) / len(records),
         final_message_exact_accuracy=len(completed_message_ids) / len(message_records),
         correct_selections_per_minute=60.0 * len(completed_records) / total_duration,
@@ -81,7 +123,16 @@ def _one_slice(
         selections_per_completed_message=(
             completed_actions / len(completed_message_ids) if completed_message_ids else None
         ),
+        mean_selection_savings=(
+            sum(selection_savings) / len(selection_savings) if selection_savings else None
+        ),
         unintended_word_rate=_rate(record.unintended_word for record in records),
+        incorrect_display_rate=_rate(record.incorrect_display for record in records),
+        candidate_generation_failure_rate=_rate(
+            record.candidate_generation_failed for record in records
+        ),
+        display_accuracy=display_accuracy,
+        selective_risk=(1.0 - display_accuracy if display_accuracy is not None else None),
         correction_rate=_rate(record.correction_required for record in records),
         abstention_rate=_rate(
             record.disposition is RankingDisposition.ABSTAIN for record in records

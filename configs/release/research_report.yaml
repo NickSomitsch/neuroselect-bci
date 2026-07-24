@@ -25,6 +25,6 @@ sources:
     required: false
   - source_id: counterfactual-fusion
     label: Offline counterfactual fusion evaluation
-    path: artifacts/evaluation/counterfactual-fusion-v1
+    path: artifacts/evaluation/counterfactual-fusion-v2
     expected_run_kind: counterfactual_replay
     required: false

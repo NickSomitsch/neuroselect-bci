@@ -227,6 +227,7 @@ class CounterfactualFusionRunner:
             and trial.personalization_adapter_sha256 is not None
         }
         return CounterfactualFusionResult(
+            schema_version=self.input.schema_version,
             run_id=f"counterfactual-fusion-{hashlib.sha256(run_material.encode()).hexdigest()[:20]}",
             generated_at=self.input.prepared_at,
             config_sha256=self.spec.digest(),
@@ -305,6 +306,7 @@ class CounterfactualFusionRunner:
             recorded_at=self.input.prepared_at,
             config=self.spec.aggregation,
         )
+        flash_duration = self._source_flash_duration(trial.flash_trial)
         return _PreparedReplay(
             trial=trial,
             evidence=evidence,
@@ -312,11 +314,21 @@ class CounterfactualFusionRunner:
                 source_trial_id=trial.flash_trial.selection_trial_id,
                 subject_id=trial.flash_trial.subject_id,
                 session_id=trial.flash_trial.session_id,
+                synthetic_profile_id=trial.synthetic_profile_id,
+                message_id=trial.message_id,
+                span_index=trial.span_index,
+                message_span_count=trial.message_span_count,
+                intended_text=trial.intended_text,
+                intended_candidate_id=trial.intended_candidate_id,
                 event_ids=tuple(item.event_id for item in trial.flash_trial.events),
                 event_onsets_seconds=tuple(item.onset_seconds for item in trial.flash_trial.events),
                 recorded_target_codes=trial.flash_trial.recorded_target_codes,
                 mapped_target_candidate_id=trial.resolved_target_candidate_id,
                 intended_candidate_was_absent=trial.intended_candidate_id is None,
+                fallback_candidate_id=(
+                    trial.other_candidate_id if not trial.target_available else None
+                ),
+                source_flash_duration_seconds=flash_duration,
                 source_layout_sha256=trial.flash_layout.digest(),
                 mapped_layout_sha256=mapped_layout.digest(),
                 neural_evidence_id=evidence.evidence_id,
@@ -385,44 +397,70 @@ class CounterfactualFusionRunner:
             disposition = RankingDisposition.DISPLAY
             reason_codes = ("counterfactual_baseline_without_abstention",)
             enhanced = ranked_ids[0] != trial.resolved_target_candidate_id
-        target_rank = ranked_ids.index(trial.resolved_target_candidate_id) + 1
-        top_correct = target_rank == 1
+        mapped_target_rank = ranked_ids.index(trial.resolved_target_candidate_id) + 1
+        target_rank = (
+            ranked_ids.index(trial.intended_candidate_id) + 1
+            if trial.intended_candidate_id is not None
+            else None
+        )
+        top_correct = trial.target_available and target_rank == 1
         selection_completed = disposition is RankingDisposition.DISPLAY and top_correct
-        correction_required = disposition is RankingDisposition.DISPLAY and not top_correct
+        fallback_selected = not trial.target_available and ranked_ids[0] == trial.other_candidate_id
+        fallback_completed = disposition is RankingDisposition.DISPLAY and fallback_selected
+        expected_display_id = (
+            trial.intended_candidate_id if trial.target_available else trial.other_candidate_id
+        )
+        incorrect_display = (
+            disposition is RankingDisposition.DISPLAY and ranked_ids[0] != expected_display_id
+        )
+        correction_required = incorrect_display
         explicit_actions = int(
             disposition in {RankingDisposition.DISPLAY, RankingDisposition.REQUEST_REPEAT}
         )
+        source_flash_duration = self._source_flash_duration(trial.flash_trial)
+        candidate_round_duration = (
+            source_flash_duration
+            if self.input.schema_version == "2.0"
+            else self.spec.timing.candidate_round_seconds
+        )
         duration = (
-            self.spec.timing.candidate_round_seconds
+            candidate_round_duration
             + explicit_actions * self.spec.timing.explicit_action_seconds
             + int(selection_completed and enhanced) * self.spec.timing.enhanced_confirmation_seconds
         )
         calibration = self._calibration(evidence, trial.resolved_target_candidate_id)
-        target_candidate = next(
-            candidate
-            for candidate in trial.candidate_set.candidates
-            if candidate.candidate_id == trial.resolved_target_candidate_id
-        )
+        intended_text = trial.resolved_intended_text
+        baseline_selections = max(1, len(intended_text))
+        selection_savings = baseline_selections - explicit_actions if selection_completed else None
         record_material = f"{condition.value}:{trial.trial_id}"
         return TrialRecord(
             trial_id=f"replay-{hashlib.sha256(record_material.encode()).hexdigest()[:20]}",
             condition=condition,
-            profile_id=trial.flash_trial.subject_id,
-            message_id=trial.trial_id,
-            span_index=0,
-            message_span_count=1,
+            profile_id=trial.resolved_profile_id,
+            eeg_subject_id=trial.flash_trial.subject_id,
+            eeg_session_id=trial.flash_trial.session_id,
+            message_id=trial.resolved_message_id,
+            span_index=trial.span_index or 0,
+            message_span_count=trial.message_span_count or 1,
             confirmed_context=trial.confirmed_context,
             retrieval_query_context_removed=condition
             in {
                 EvaluationCondition.ABLATION_REMOVE_CONTEXT,
                 EvaluationCondition.ABLATION_REMOVE_RETRIEVAL_CONTEXT,
             },
-            target_text=target_candidate.text,
-            target_word_count=max(1, len(target_candidate.text.split())),
+            target_text=intended_text,
+            target_word_count=max(1, len(intended_text.split())),
             candidate_ids=candidate_ids,
             ranked_candidate_ids=ranked_ids,
             target_candidate_id=trial.resolved_target_candidate_id,
+            intended_candidate_id=trial.intended_candidate_id,
+            mapped_target_candidate_id=trial.resolved_target_candidate_id,
+            fallback_candidate_id=(
+                trial.other_candidate_id if not trial.target_available else None
+            ),
+            target_available=trial.target_available,
             target_rank=target_rank,
+            mapped_target_rank=mapped_target_rank,
             top_candidate_id=ranked_ids[0],
             neural_top_candidate_id=neural_top_id,
             language_top_candidate_id=language_top_id,
@@ -443,14 +481,38 @@ class CounterfactualFusionRunner:
             prediction_correct=calibration[1],
             neural_brier_score=calibration[2],
             top_1_correct=top_correct,
-            top_3_correct=target_rank <= 3,
+            top_3_correct=target_rank is not None and target_rank <= 3,
             explicit_selection_completed=selection_completed,
+            fallback_selected=fallback_selected,
+            fallback_selection_completed=fallback_completed,
             enhanced_confirmation_required=enhanced,
             correction_required=correction_required,
+            incorrect_display=incorrect_display,
+            candidate_generation_failed=trial.candidate_generation_failed,
             explicit_action_count=explicit_actions,
+            baseline_selection_count=baseline_selections,
+            modeled_selection_count=explicit_actions,
+            selection_savings=selection_savings,
             retrieval_hit_count=sum(len(value.hits) for value in retrieval),
+            source_flash_duration_seconds=source_flash_duration,
             modeled_duration_seconds=duration,
         )
+
+    @staticmethod
+    def _source_flash_duration(trial: FlashProbabilityTrial) -> float:
+        """Include the final presentation interval in the recorded flash duration."""
+
+        onsets = np.asarray(
+            [event.onset_seconds for event in trial.events],
+            dtype=np.float64,
+        )
+        intervals = np.diff(onsets)
+        positive = intervals[intervals > 0.0]
+        if len(positive) == 0:
+            raise CounterfactualConfigurationError(
+                "recorded flash trial requires increasing event onsets"
+            )
+        return float(onsets[-1] - onsets[0] + np.median(positive))
 
     def _condition_evidence(
         self,
@@ -595,17 +657,22 @@ class CounterfactualFusionRunner:
         condition: EvaluationCondition,
         metric: Literal["top_1_candidate_recall", "selection_completion_rate"],
     ) -> PairedBootstrapInterval:
-        by_key = {(record.condition, record.message_id): record for record in records}
+        def trial_key(record: TrialRecord) -> tuple[str, str, int]:
+            return record.profile_id, record.message_id, record.span_index
+
+        by_key = {(record.condition, trial_key(record)): record for record in records}
         reference_records = tuple(
             record
             for record in records
             if record.condition is EvaluationCondition.F_COMPLETE_SYSTEM
         )
-        subject_trials: dict[str, list[str]] = {}
+        subject_trials: dict[str, list[tuple[str, str, int]]] = {}
         for record in reference_records:
-            if (condition, record.message_id) not in by_key:
+            key = trial_key(record)
+            if (condition, key) not in by_key:
                 raise CounterfactualConfigurationError("paired condition is missing a replay trial")
-            subject_trials.setdefault(record.profile_id, []).append(record.message_id)
+            subject_id = record.eeg_subject_id or record.profile_id
+            subject_trials.setdefault(subject_id, []).append(key)
         subjects = tuple(sorted(subject_trials))
         material = f"{self.spec.seed}:{condition.value}:{metric}"
         seed = int.from_bytes(hashlib.sha256(material.encode()).digest()[:8], "big")
@@ -617,7 +684,7 @@ class CounterfactualFusionRunner:
             return float(record.explicit_selection_completed)
 
         observed_pairs = [
-            value(by_key[(condition, record.message_id)]) - value(record)
+            value(by_key[(condition, trial_key(record))]) - value(record)
             for record in reference_records
         ]
         samples = np.empty(self.spec.bootstrap_resamples, dtype=np.float64)

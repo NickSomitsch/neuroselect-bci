@@ -29,6 +29,11 @@ dependencies = [
   "uvicorn>=0.30,<1",
 ]
 
+[project.optional-dependencies]
+local-language = [
+  "mlx-lm[train]>=0.31.3,<0.32; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
 [project.urls]
 Repository = "https://github.com/NickSomitsch/neuroselect-bci"
 Issues = "https://github.com/NickSomitsch/neuroselect-bci/issues"

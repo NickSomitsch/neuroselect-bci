@@ -173,10 +173,9 @@ class SimulatedExperimentRunner:
                 "An ideal explicit confirmer rejects every incorrect top recommendation; "
                 "therefore unintended-word rate measures the confirmation safety invariant.",
                 "Personalized LoRA and complete calibrated-system conditions remain unavailable "
-                "until their real components and held-out evaluations exist.",
-                "Full conversation-context removal remains unavailable because the controlled "
-                "candidate backend has no context-sensitive language model; the available "
-                "retrieval-context ablation removes context only from retrieval queries.",
+                "in this fixture recipe until local trained and decoder artifacts are supplied.",
+                "Full conversation-context removal remains unavailable in this fixture recipe; "
+                "the retrieval-context ablation removes context only from retrieval queries.",
             ),
         )
 

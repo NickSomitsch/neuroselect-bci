@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -29,6 +31,7 @@ from neuroselect.evaluation import (
     CounterfactualFusionTrial,
     EvaluationCondition,
     flash_trials_from_decoder_evaluation,
+    load_counterfactual_input,
     load_counterfactual_spec,
     read_counterfactual_artifacts,
     shuffle_retrieval_across_candidates,
@@ -160,11 +163,21 @@ def fusion_trial(
     subject_id: str,
     intended_candidate_id: str | None,
 ) -> CounterfactualFusionTrial:
+    intended_text = (
+        next(item.text for item in candidates() if item.candidate_id == intended_candidate_id)
+        if intended_candidate_id is not None
+        else "missing intended phrase"
+    )
     return CounterfactualFusionTrial(
         trial_id=f"prepared-{ordinal}",
+        synthetic_profile_id=("synthetic-concise" if ordinal % 2 == 0 else "synthetic-formal"),
+        message_id=f"message-{ordinal}",
+        span_index=0,
+        message_span_count=1,
         candidate_set=candidate_set(ordinal),
         flash_layout=layout(),
         flash_trial=flash_trial(ordinal, subject_id),
+        intended_text=intended_text,
         intended_candidate_id=intended_candidate_id,
         other_candidate_id="other",
         confirmed_context="Could you",
@@ -290,6 +303,19 @@ def test_counterfactual_runner_executes_paired_matrix_and_marks_fixture_claims()
     assert result.personalization_adapters == {"controlled-profile-adapter-v1": "d" * 64}
     assert result.mapping_provenance[-1].mapped_target_candidate_id == "other"
     assert result.mapping_provenance[-1].intended_candidate_was_absent is True
+    assert result.mapping_provenance[-1].intended_text == "missing intended phrase"
+    assert result.mapping_provenance[-1].synthetic_profile_id == "synthetic-formal"
+    absent = [record for record in result.trial_records if record.message_id == "message-3"]
+    assert all(not record.target_available for record in absent)
+    assert all(record.target_rank is None for record in absent)
+    assert all(not record.top_1_correct for record in absent)
+    assert all(not record.explicit_selection_completed for record in absent)
+    neural_only_absent = next(
+        record for record in absent if record.condition is EvaluationCondition.A_BCI_ONLY
+    )
+    assert neural_only_absent.fallback_selection_completed
+    assert neural_only_absent.source_flash_duration_seconds == pytest.approx(2.5)
+    assert neural_only_absent.modeled_duration_seconds == pytest.approx(3.5)
     uniform = [
         record
         for record in result.trial_records
@@ -301,6 +327,15 @@ def test_counterfactual_runner_executes_paired_matrix_and_marks_fixture_claims()
         metric.condition for metric in result.metrics if metric.profile_id is None
     }
     assert overall_conditions == set(ALL_CONDITIONS)
+    neural_only_metrics = next(
+        metric
+        for metric in result.metrics
+        if metric.profile_id is None and metric.condition is EvaluationCondition.A_BCI_ONLY
+    )
+    assert neural_only_metrics.target_availability_rate == pytest.approx(0.75)
+    assert neural_only_metrics.top_1_candidate_recall == pytest.approx(0.75)
+    assert neural_only_metrics.top_1_recall_given_available == pytest.approx(1.0)
+    assert neural_only_metrics.other_fallback_success_rate == pytest.approx(1.0)
     invalid_result = result.model_dump(mode="json")
     invalid_result["claim_eligible"] = True
     with pytest.raises(ValidationError, match="cannot be claim-eligible"):
@@ -441,8 +476,164 @@ def test_decoder_evaluation_extraction_keeps_only_labeled_timed_trials() -> None
     )
 
 
+def test_v2_requires_complete_messages_and_v1_inputs_remain_readable(
+    tmp_path: Path,
+) -> None:
+    spec = CounterfactualFusionSpec(
+        experiment_id="v2-message-provenance",
+        conditions=(EvaluationCondition.A_BCI_ONLY,),
+        personalization_evidence_kind="controlled_fixture",
+    )
+    first = fusion_trial(0, "P_03", "intended").model_copy(
+        update={
+            "synthetic_profile_id": "synthetic-concise",
+            "message_id": "two-span-message",
+            "span_index": 0,
+            "message_span_count": 2,
+        }
+    )
+    second = fusion_trial(1, "P_03", "likely").model_copy(
+        update={
+            "synthetic_profile_id": "synthetic-concise",
+            "message_id": "two-span-message",
+            "span_index": 1,
+            "message_span_count": 2,
+        }
+    )
+    with pytest.raises(ValidationError, match="every span"):
+        CounterfactualExperimentInput(
+            prepared_at=NOW,
+            source_decoder_manifest_sha256="a" * 64,
+            original_task_evaluation_sha256="b" * 64,
+            spec=spec,
+            trials=(first,),
+        )
+
+    complete = CounterfactualExperimentInput(
+        prepared_at=NOW,
+        source_decoder_manifest_sha256="a" * 64,
+        original_task_evaluation_sha256="b" * 64,
+        spec=spec,
+        trials=(first, second),
+    )
+    complete_result = CounterfactualFusionRunner(complete).run()
+    overall = next(item for item in complete_result.metrics if item.profile_id is None)
+    assert overall.message_count == 1
+    assert overall.completed_message_count == 1
+    assert overall.final_message_exact_accuracy == 1.0
+
+    legacy_spec = CounterfactualFusionSpec(
+        schema_version="1.0",
+        protocol_revision="offline-counterfactual-fusion-v1",
+        experiment_id="legacy-v1-input",
+        conditions=(EvaluationCondition.A_BCI_ONLY,),
+        personalization_evidence_kind="controlled_fixture",
+    )
+    legacy_trial_payload = fusion_trial(2, "P_04", "alternative").model_dump(
+        mode="json", exclude_none=True
+    )
+    for field in (
+        "synthetic_profile_id",
+        "message_id",
+        "span_index",
+        "message_span_count",
+        "intended_text",
+        "candidate_generation_failed",
+    ):
+        legacy_trial_payload.pop(field, None)
+    legacy_input = CounterfactualExperimentInput(
+        schema_version="1.0",
+        prepared_at=NOW,
+        source_decoder_manifest_sha256="a" * 64,
+        original_task_evaluation_sha256="b" * 64,
+        spec=legacy_spec,
+        trials=(CounterfactualFusionTrial.model_validate(legacy_trial_payload),),
+    )
+    legacy_path = tmp_path / "legacy-v1.json"
+    legacy_path.write_text(legacy_input.model_dump_json(), encoding="utf-8")
+
+    restored = load_counterfactual_input(legacy_path)
+    legacy_result = CounterfactualFusionRunner(restored).run()
+
+    legacy_digest_payload = legacy_input.model_dump(mode="json")
+    for trial in legacy_digest_payload["trials"]:
+        for field in (
+            "synthetic_profile_id",
+            "message_id",
+            "span_index",
+            "message_span_count",
+            "intended_text",
+            "candidate_generation_failed",
+        ):
+            trial.pop(field, None)
+    expected_legacy_digest = hashlib.sha256(
+        json.dumps(legacy_digest_payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+
+    assert restored.schema_version == "1.0"
+    assert restored.digest() == expected_legacy_digest
+    assert legacy_result.schema_version == "1.0"
+    assert legacy_result.trial_records[0].profile_id == "P_04"
+    assert legacy_result.trial_records[0].modeled_duration_seconds == pytest.approx(3.0)
+
+    legacy_result_payload = legacy_result.model_dump(mode="json")
+    for record in legacy_result_payload["trial_records"]:
+        for field in (
+            "eeg_subject_id",
+            "eeg_session_id",
+            "intended_candidate_id",
+            "mapped_target_candidate_id",
+            "fallback_candidate_id",
+            "mapped_target_rank",
+            "fallback_selected",
+            "fallback_selection_completed",
+            "incorrect_display",
+            "candidate_generation_failed",
+            "baseline_selection_count",
+            "modeled_selection_count",
+            "selection_savings",
+            "source_flash_duration_seconds",
+        ):
+            record.pop(field, None)
+    for metric in legacy_result_payload["metrics"]:
+        for field in (
+            "available_trial_count",
+            "fallback_trial_count",
+            "displayed_trial_count",
+            "candidate_generation_failure_count",
+            "top_1_recall_given_available",
+            "top_3_recall_given_available",
+            "other_fallback_success_rate",
+            "mean_selection_savings",
+            "incorrect_display_rate",
+            "candidate_generation_failure_rate",
+            "display_accuracy",
+            "selective_risk",
+        ):
+            metric.pop(field, None)
+    for mapping in legacy_result_payload["mapping_provenance"]:
+        for field in (
+            "synthetic_profile_id",
+            "message_id",
+            "span_index",
+            "message_span_count",
+            "intended_text",
+            "intended_candidate_id",
+            "fallback_candidate_id",
+            "source_flash_duration_seconds",
+        ):
+            mapping.pop(field, None)
+
+    reparsed_legacy_result = type(legacy_result).model_validate(legacy_result_payload)
+
+    assert reparsed_legacy_result.trial_records[0].mapped_target_candidate_id == "alternative"
+    assert reparsed_legacy_result.metrics[0].top_1_recall_given_available == 1.0
+
+
 def test_tracked_counterfactual_config_is_strict(tmp_path: Path) -> None:
     spec = load_counterfactual_spec("configs/experiments/counterfactual_fusion.yaml")
+    assert spec.schema_version == "2.0"
+    assert spec.protocol_revision == "offline-counterfactual-fusion-v2"
     assert spec.conditions == ALL_CONDITIONS
     assert len(spec.digest()) == 64
     with pytest.raises(ValidationError):
