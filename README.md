@@ -137,12 +137,18 @@ make language-evaluation
 ```
 
 The tracked development recipe selects one test message per synthetic profile, verifies every
-corpus and adapter checksum, generates candidates without inserting the intended span, and writes
-generic-versus-personalized availability and ranking artifacts under
+corpus and adapter checksum, and generates candidates without inserting the intended span. For
+non-empty contexts, Qwen selects from compact noun, deadline, or ending vocabularies derived
+exclusively from train and validation messages; empty-message generation remains unconstrained.
+The development display contains nine language candidates plus the three application controls.
+The vocabulary checksum and generic-versus-personalized availability and ranking artifacts are
+written under
 `artifacts/evaluation/held-out-language-personalization-dev-v1/`. It expects adapters named
 `<profile-id>-dev-v1` under `artifacts/models/language-lora/`. Limited runs and development
 adapters are always non-claim-eligible. The artifact also reports narrowly repaired outer-JSON
-closers separately from unrecoverable candidate-generation failures.
+closers separately from unrecoverable candidate-generation failures. Target availability means
+that the exact held-out next phrase appeared as one of the visible language candidates; an absent
+target cannot receive a generic or personalized rank.
 
 Run the current CPU-only candidate → RAG → simulated-neural → fusion slice with:
 

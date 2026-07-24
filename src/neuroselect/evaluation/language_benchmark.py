@@ -249,6 +249,7 @@ class HeldOutLanguageResult(BaseModel):
     generated_at: datetime
     config_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     benchmark_source_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    candidate_vocabulary_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     spec: HeldOutLanguageSpec
     backend: BackendMetadata
     adapters: dict[str, PersonalizationAdapterManifest]
@@ -407,6 +408,7 @@ class HeldOutLanguageBenchmarkRunner:
         benchmark: GeneratedBenchmark,
         runtimes: tuple[LanguageProfileRuntime, ...],
         generated_at: datetime | None = None,
+        candidate_vocabulary_sha256: str | None = None,
     ) -> HeldOutLanguageResult:
         runtime_by_profile = {runtime.profile.profile_id: runtime for runtime in runtimes}
         if len(runtime_by_profile) != len(runtimes) or set(runtime_by_profile) != set(
@@ -472,6 +474,8 @@ class HeldOutLanguageBenchmarkRunner:
             (
                 self.spec.digest(),
                 benchmark.source_sha256,
+                _canonical_json(backend.model_dump(mode="json")),
+                candidate_vocabulary_sha256 or "unconstrained",
                 *(adapters[profile_id].digest() for profile_id in sorted(adapters)),
             )
         )
@@ -497,6 +501,10 @@ class HeldOutLanguageBenchmarkRunner:
             ),
             "Retrieval evidence is exported separately and is not folded into language ranks.",
         ]
+        if candidate_vocabulary_sha256 is not None:
+            limitations.append(
+                "Candidate vocabulary constraints use only train and validation messages."
+            )
         if not claim_eligible:
             limitations.append(
                 "This limited development run is not eligible for personalization-benefit claims."
@@ -507,6 +515,7 @@ class HeldOutLanguageBenchmarkRunner:
             generated_at=generated_at or datetime.now(UTC),
             config_sha256=self.spec.digest(),
             benchmark_source_sha256=benchmark.source_sha256,
+            candidate_vocabulary_sha256=candidate_vocabulary_sha256,
             spec=self.spec,
             backend=backend,
             adapters=adapters,

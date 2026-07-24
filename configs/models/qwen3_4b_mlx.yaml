@@ -7,7 +7,7 @@ license: Apache-2.0
 download_enabled: false
 deterministic: false
 generator_revision: mlx-structured-candidates-v1
-prompt_revision: structured-next-span-qwen3-v1
+prompt_revision: structured-next-span-qwen3-v3
 generation:
   enable_thinking: false
   temperature: 0.0

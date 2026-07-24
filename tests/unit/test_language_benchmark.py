@@ -12,6 +12,7 @@ from neuroselect.evaluation import (
     HeldOutLanguageBenchmarkRunner,
     HeldOutLanguageSpec,
     LanguageProfileRuntime,
+    build_held_out_candidate_vocabulary,
     load_held_out_language_spec,
     read_held_out_language_artifacts,
     write_held_out_language_artifacts,
@@ -137,6 +138,56 @@ def benchmark() -> GeneratedBenchmark:
     )
 
 
+def vocabulary_benchmark() -> GeneratedBenchmark:
+    messages: dict[BenchmarkSplit, tuple[BenchmarkMessage, ...]] = {
+        BenchmarkSplit.TRAIN: (
+            BenchmarkMessage(
+                message_id="msg-" + "3" * 20,
+                profile_id=PROFILE.profile_id,
+                split=BenchmarkSplit.TRAIN,
+                template_id="train-request",
+                topic="test",
+                text="Could you close the desk lamp when ready.",
+                target_spans=("Could you close", "the desk lamp", "when ready."),
+            ),
+        ),
+        BenchmarkSplit.VALIDATION: (
+            BenchmarkMessage(
+                message_id="msg-" + "4" * 20,
+                profile_id=PROFILE.profile_id,
+                split=BenchmarkSplit.VALIDATION,
+                template_id="validation-time",
+                topic="test",
+                text="Before early afternoon Please close the desk lamp when ready.",
+                target_spans=(
+                    "Before",
+                    "early afternoon",
+                    "Please close",
+                    "the desk lamp",
+                    "when ready.",
+                ),
+            ),
+        ),
+        BenchmarkSplit.TEST: (
+            BenchmarkMessage(
+                message_id="msg-" + "5" * 20,
+                profile_id=PROFILE.profile_id,
+                split=BenchmarkSplit.TEST,
+                template_id="test-secret",
+                topic="test",
+                text="Secret test phrase",
+                target_spans=("Secret test phrase",),
+            ),
+        ),
+    }
+    return GeneratedBenchmark(
+        schema_version="1.0",
+        source_sha256="9" * 64,
+        profile_ids=(PROFILE.profile_id,),
+        messages=messages,
+    )
+
+
 def corpus_manifest() -> PersonalizationCorpusManifest:
     return PersonalizationCorpusManifest(
         schema_version="1.0",
@@ -230,6 +281,7 @@ def test_spec_loading_is_strict_and_requires_timezone(tmp_path: Path) -> None:
         ROOT / "configs/experiments/held_out_language_personalization.yaml"
     )
     assert loaded.split is BenchmarkSplit.TEST
+    assert loaded.candidate_count == 12
     assert loaded.maximum_messages_per_profile == 1
     assert loaded.evidence_tier == "development"
 
@@ -239,6 +291,22 @@ def test_spec_loading_is_strict_and_requires_timezone(tmp_path: Path) -> None:
         load_held_out_language_spec(invalid)
     with pytest.raises(ValidationError, match="timezone"):
         spec(retrieval_at=datetime(2026, 7, 18))
+
+
+def test_candidate_vocabulary_uses_only_train_and_validation_messages() -> None:
+    vocabulary = build_held_out_candidate_vocabulary(vocabulary_benchmark())
+
+    assert vocabulary.noun_phrases == ("the desk lamp",)
+    assert vocabulary.deadline_phrases == ("Before early afternoon",)
+    assert vocabulary.ending_phrases == ("when ready.",)
+    assert vocabulary.phrases_for("") == ()
+    assert vocabulary.phrases_for("Could you close") == ("the desk lamp",)
+    assert vocabulary.phrases_for("Could you close the desk lamp") == ("Before early afternoon",)
+    assert vocabulary.phrases_for("Could you close the desk lamp before early afternoon") == (
+        "when ready.",
+    )
+    assert "Secret test phrase" not in vocabulary.model_dump_json()
+    assert len(vocabulary.digest()) == 64
 
 
 def test_runner_records_natural_target_absence_and_ranking() -> None:
@@ -331,6 +399,7 @@ def test_language_artifact_round_trip_and_tamper_detection(tmp_path: Path) -> No
             benchmark=benchmark(),
             runtimes=(build_runtime(store),),
             generated_at=NOW,
+            candidate_vocabulary_sha256="8" * 64,
         )
     manifest = write_held_out_language_artifacts(
         result,
@@ -345,6 +414,11 @@ def test_language_artifact_round_trip_and_tamper_detection(tmp_path: Path) -> No
     assert restored_manifest == manifest
     assert manifest.metadata["claim_eligible"] is False
     assert manifest.metadata["working_tree_dirty"] is True
+    assert result.candidate_vocabulary_sha256 == "8" * 64
+    assert any(
+        item.artifact_id == "non-test-candidate-vocabulary" and item.sha256 == "8" * 64
+        for item in manifest.datasets
+    )
 
     with pytest.raises(FileExistsError, match="refusing to overwrite"):
         write_held_out_language_artifacts(
@@ -354,6 +428,22 @@ def test_language_artifact_round_trip_and_tamper_detection(tmp_path: Path) -> No
             package_versions={"python": "3.12"},
             device={"system": "test"},
         )
+    manifest_payload = manifest.model_dump(mode="json")
+    manifest_payload["datasets"] = [
+        item
+        for item in manifest_payload["datasets"]
+        if item["artifact_id"] != "non-test-candidate-vocabulary"
+    ]
+    (tmp_path / "manifest.json").write_text(
+        type(manifest).model_validate(manifest_payload).canonical_json() + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="manifest does not agree"):
+        read_held_out_language_artifacts(tmp_path)
+    (tmp_path / "manifest.json").write_text(
+        manifest.canonical_json() + "\n",
+        encoding="utf-8",
+    )
     (tmp_path / "metrics.json").write_text("{}\n", encoding="utf-8")
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
         read_held_out_language_artifacts(tmp_path)

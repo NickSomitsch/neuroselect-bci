@@ -86,6 +86,12 @@ class FakeRuntime:
         return self.scores[: len(continuations)]
 
 
+class FakeCandidateVocabulary:
+    def phrases_for(self, confirmed_text: str) -> tuple[str, ...]:
+        assert confirmed_text == "Could you send"
+        return ("Alpha.", "Beta.", "Gamma.")
+
+
 def test_local_model_config_is_pinned_and_strict(tmp_path: Path) -> None:
     config = load_local_model_config(MODEL_CONFIG)
 
@@ -122,7 +128,9 @@ def test_local_backend_replaces_self_reported_support_with_likelihoods() -> None
             "alpha": expected[0] / selected_total,
         }
     )
-    assert "placeholders" in runtime.generated_messages[1]["content"]
+    assert "direct continuations" in runtime.generated_messages[1]["content"]
+    assert "appended verbatim" in runtime.generated_messages[0]["content"]
+    assert "Sure, I can" in runtime.generated_messages[0]["content"]
     assert "Next phrase:" in runtime.scored_messages[0]["content"]
     assert result.backend.deterministic is False
 
@@ -139,6 +147,45 @@ def test_local_backend_marks_outer_json_repair_in_generation_diagnostics() -> No
     result = CandidateGenerator(backend).generate(CandidateGenerationRequest(candidate_count=6))
 
     assert result.diagnostics.backend_output_repaired is True
+
+
+def test_local_backend_constrains_and_canonicalizes_non_test_vocabulary() -> None:
+    runtime = FakeRuntime(
+        response=json.dumps(
+            {
+                "candidates": [
+                    {"text": "alpha", "support": 0.0},
+                    {"text": "not allowed", "support": 0.0},
+                    {"text": "beta", "support": 0.0},
+                    {"text": "gamma", "support": 0.0},
+                ]
+            }
+        ),
+        scores=(-1.0, -2.0, -3.0),
+    )
+    backend = LocalModelCandidateBackend(
+        load_local_model_config(MODEL_CONFIG),
+        runtime=runtime,
+        candidate_vocabulary=FakeCandidateVocabulary(),
+    )
+
+    result = CandidateGenerator(backend).generate(
+        CandidateGenerationRequest(
+            confirmed_text="Could you send",
+            candidate_count=6,
+        )
+    )
+
+    assert {candidate.text for candidate in result.candidate_set.candidates[:-3]} == {
+        "Alpha.",
+        "Beta.",
+        "Gamma.",
+    }
+    assert (
+        "Allowed phrases learned only from non-test messages"
+        in (runtime.generated_messages[1]["content"])
+    )
+    assert "not allowed" not in {candidate.text for candidate in result.candidate_set.candidates}
 
 
 def test_local_backend_fails_on_bad_runtime_scores_and_output() -> None:

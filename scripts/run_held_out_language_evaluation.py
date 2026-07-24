@@ -12,6 +12,7 @@ from typing import Any
 from neuroselect.evaluation import (
     HeldOutLanguageBenchmarkRunner,
     LanguageProfileRuntime,
+    build_held_out_candidate_vocabulary,
     load_held_out_language_spec,
     write_held_out_language_artifacts,
 )
@@ -114,7 +115,11 @@ def main() -> None:
     model_config = load_local_model_config(args.model_config)
     profiles = load_profiles(args.profiles)
     benchmark = generate_from_sources(args.benchmark_spec, args.profiles)
-    base_backend = LocalModelCandidateBackend(model_config)
+    candidate_vocabulary = build_held_out_candidate_vocabulary(benchmark)
+    base_backend = LocalModelCandidateBackend(
+        model_config,
+        candidate_vocabulary=candidate_vocabulary,
+    )
     generator = CandidateGenerator(base_backend)
 
     with SQLiteKnowledgeStore(":memory:") as store:
@@ -162,6 +167,7 @@ def main() -> None:
         result = HeldOutLanguageBenchmarkRunner(spec).run(
             benchmark=benchmark,
             runtimes=tuple(runtimes),
+            candidate_vocabulary_sha256=candidate_vocabulary.digest(),
         )
 
     revision, source_tree_sha256 = git_state()

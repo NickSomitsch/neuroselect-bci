@@ -91,6 +91,18 @@ def write_held_out_language_artifacts(
                 license="MIT",
             ),
             *(
+                (
+                    ArtifactRef(
+                        artifact_id="non-test-candidate-vocabulary",
+                        uri="artifact://language-candidate-vocabulary",
+                        sha256=result.candidate_vocabulary_sha256,
+                        revision="non-test-autocomplete-v1",
+                    ),
+                )
+                if result.candidate_vocabulary_sha256 is not None
+                else ()
+            ),
+            *(
                 ArtifactRef(
                     artifact_id=f"personalization-corpus-{profile_id}",
                     uri=f"artifact://language-corpus/{profile_id}",
@@ -182,10 +194,21 @@ def read_held_out_language_artifacts(
         f"model://personalization/{adapter.adapter_id}": adapter.adapter_sha256
         for adapter in result.adapters.values()
     }
+    vocabulary_refs = {
+        item.uri: item.sha256
+        for item in manifest.datasets
+        if item.uri == "artifact://language-candidate-vocabulary"
+    }
+    expected_vocabulary = (
+        {"artifact://language-candidate-vocabulary": (result.candidate_vocabulary_sha256)}
+        if result.candidate_vocabulary_sha256 is not None
+        else {}
+    )
     if (
         manifest.run_kind is not RunKind.COMPONENT_EVALUATION
         or manifest.config_sha256 != result.config_sha256
         or adapter_refs != expected_adapters
+        or vocabulary_refs != expected_vocabulary
     ):
         raise ValueError("held-out language manifest does not agree with the result")
     return result, manifest

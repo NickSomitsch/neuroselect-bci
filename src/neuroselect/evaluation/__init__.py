@@ -35,6 +35,11 @@ from neuroselect.evaluation.language_benchmark import (
     LanguageProfileRuntime,
     load_held_out_language_spec,
 )
+from neuroselect.evaluation.language_vocabulary import (
+    CANDIDATE_VOCABULARY_REVISION,
+    HeldOutCandidateVocabulary,
+    build_held_out_candidate_vocabulary,
+)
 from neuroselect.evaluation.metrics import calculate_metrics, expected_calibration_error
 from neuroselect.evaluation.models import (
     ConditionAvailability,
@@ -57,6 +62,7 @@ from neuroselect.evaluation.runner import (
 )
 
 __all__ = [
+    "CANDIDATE_VOCABULARY_REVISION",
     "ConditionAvailability",
     "ConditionDefinition",
     "ConditionFamily",
@@ -72,6 +78,7 @@ __all__ = [
     "EvaluationTiming",
     "ExperimentConfigurationError",
     "ExperimentResult",
+    "HeldOutCandidateVocabulary",
     "HeldOutLanguageBenchmarkRunner",
     "HeldOutLanguageResult",
     "HeldOutLanguageSpec",
@@ -85,6 +92,7 @@ __all__ = [
     "SimulatedExperimentRunner",
     "SimulatedExperimentSpec",
     "TrialRecord",
+    "build_held_out_candidate_vocabulary",
     "calculate_metrics",
     "capture_runtime_environment",
     "condition_by_id",

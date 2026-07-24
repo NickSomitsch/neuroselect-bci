@@ -149,15 +149,41 @@ class LanguageModelRuntime(Protocol):
     ) -> tuple[float, ...]: ...
 
 
+class CandidateVocabularyProvider(Protocol):
+    """Context-only candidate vocabulary used by held-out-safe evaluation."""
+
+    def phrases_for(self, confirmed_text: str) -> tuple[str, ...]: ...
+
+
 def _generation_messages(
-    request: CandidateGenerationRequest, *, proposal_count: int
+    request: CandidateGenerationRequest,
+    *,
+    proposal_count: int,
+    allowed_phrases: tuple[str, ...] = (),
 ) -> tuple[ChatMessage, ...]:
     context = request.confirmed_text or "(empty message)"
+    vocabulary_instruction = ""
+    if allowed_phrases:
+        vocabulary_instruction = (
+            "\nAllowed phrases learned only from non-test messages: "
+            + " | ".join(allowed_phrases)
+            + "\nEvery candidate must be copied exactly from this allowed list and must append "
+            "grammatically to the confirmed message."
+        )
     return (
         {
             "role": "system",
             "content": (
-                "You propose short next-message phrases for an assistive communication display. "
+                "You are an autocomplete candidate generator for a person composing an "
+                "assistive-communication message. Every candidate must be a fragment that can be "
+                "appended verbatim after the confirmed message to continue that person's message. "
+                "Do not answer the message, describe an action, issue an interface command, "
+                "paraphrase or repeat the confirmed text. When the confirmed message is empty, "
+                "propose beginnings of messages the person could compose. For example, after "
+                "'Could you' a valid candidate is 'bring the water', while 'Sure, I can' and "
+                "'Send message' are invalid. After 'I feel' a valid candidate is 'tired today', "
+                "while 'How can I help?' is invalid. Favor probable grammatical continuations "
+                "while keeping the alternatives meaningfully distinct. "
                 "Return only one JSON object with exactly the shape "
                 '{"candidates":[{"text":"short phrase","support":0.0}]}. '
                 "Do not propose Other, Back, or Cancel. Do not include markdown or commentary."
@@ -167,9 +193,10 @@ def _generation_messages(
             "role": "user",
             "content": (
                 f"Confirmed message: {context!r}\n"
-                f"Produce {proposal_count} distinct candidates. Each candidate must contain at "
-                f"most {request.maximum_phrase_tokens} whitespace-delimited tokens. The support "
-                "numbers are placeholders and will be replaced by measured model likelihoods."
+                f"Produce exactly {proposal_count} distinct direct continuations. Each candidate "
+                f"must contain between one and {request.maximum_phrase_tokens} "
+                "whitespace-delimited tokens. The support numbers are placeholders and will be "
+                f"replaced by measured model likelihoods.{vocabulary_instruction}"
             ),
         },
     )
@@ -310,6 +337,7 @@ class LocalModelCandidateBackend:
         runtime: LanguageModelRuntime | None = None,
         adapter_path: str | Path | None = None,
         allow_download: bool = False,
+        candidate_vocabulary: CandidateVocabularyProvider | None = None,
     ) -> None:
         self.config = config or load_local_model_config()
         self.metadata = self.config.metadata
@@ -318,26 +346,63 @@ class LocalModelCandidateBackend:
             adapter_path=adapter_path,
             allow_download=allow_download,
         )
+        self.candidate_vocabulary = candidate_vocabulary
         self.last_output_repaired = False
 
     def generate(self, request: CandidateGenerationRequest) -> tuple[CandidateProposal, ...]:
         language_quota = request.candidate_count - 3
-        proposal_count = max(
-            self.config.generation.minimum_proposals,
-            language_quota * self.config.generation.proposal_multiplier,
+        allowed_phrases = (
+            self.candidate_vocabulary.phrases_for(request.confirmed_text)
+            if self.candidate_vocabulary is not None
+            else ()
         )
-        messages = _generation_messages(request, proposal_count=proposal_count)
+        if allowed_phrases and len(allowed_phrases) < language_quota:
+            raise CandidateGenerationError(
+                "candidate vocabulary does not cover the visible language quota"
+            )
+        proposal_count = (
+            len(allowed_phrases)
+            if allowed_phrases
+            else max(
+                self.config.generation.minimum_proposals,
+                language_quota * self.config.generation.proposal_multiplier,
+            )
+        )
+        messages = _generation_messages(
+            request,
+            proposal_count=proposal_count,
+            allowed_phrases=allowed_phrases,
+        )
         raw = self.runtime.generate(messages, max_tokens=self.config.generation.maximum_new_tokens)
         from neuroselect.language.generation import (
             _parse_structured_proposals_with_diagnostics,
         )
 
         proposals, self.last_output_repaired = _parse_structured_proposals_with_diagnostics(raw)
+        if allowed_phrases:
+            canonical = {self._vocabulary_key(phrase): phrase for phrase in allowed_phrases}
+            filtered: dict[str, CandidateProposal] = {}
+            for proposal in proposals:
+                key = self._vocabulary_key(proposal.text)
+                if key in canonical:
+                    filtered.setdefault(
+                        key,
+                        proposal.model_copy(update={"text": canonical[key]}),
+                    )
+            proposals = tuple(filtered.values())
+            if not proposals:
+                raise CandidateGenerationError(
+                    "backend returned no candidates from the non-test vocabulary"
+                )
         support = self.score_texts(request, tuple(proposal.text for proposal in proposals))
         return tuple(
             proposal.model_copy(update={"support": score})
             for proposal, score in zip(proposals, support, strict=True)
         )
+
+    @staticmethod
+    def _vocabulary_key(value: str) -> str:
+        return " ".join(value.casefold().split()).rstrip(".,!?;:")
 
     def score_texts(
         self,
