@@ -345,6 +345,32 @@ def test_counterfactual_runner_executes_paired_matrix_and_marks_fixture_claims()
         type(result).model_validate(invalid_result)
 
 
+def test_counterfactual_result_requires_complete_paired_evaluation_evidence() -> None:
+    result = CounterfactualFusionRunner(experiment_input()).run()
+
+    incomplete_records = result.model_dump(mode="json")
+    incomplete_records["trial_records"] = [
+        record
+        for record in incomplete_records["trial_records"]
+        if not (
+            record["condition"] == EvaluationCondition.B_GENERIC_LANGUAGE_ONLY.value
+            and record["message_id"] == "message-0"
+        )
+    ]
+    with pytest.raises(ValidationError, match="identical logical trials"):
+        type(result).model_validate(incomplete_records)
+
+    incomplete_intervals = result.model_dump(mode="json")
+    incomplete_intervals["paired_intervals"] = incomplete_intervals["paired_intervals"][:-1]
+    with pytest.raises(ValidationError, match="complete comparison matrix"):
+        type(result).model_validate(incomplete_intervals)
+
+    duplicated_source = result.model_dump(mode="json")
+    duplicated_source["mapping_provenance"][-1] = duplicated_source["mapping_provenance"][0]
+    with pytest.raises(ValidationError, match="distinct source trials"):
+        type(result).model_validate(duplicated_source)
+
+
 def test_shuffled_retrieval_moves_evidence_to_a_different_candidate() -> None:
     trial = fusion_trial(0, "P_03", "intended")
 

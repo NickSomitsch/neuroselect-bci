@@ -239,12 +239,18 @@ the current seven labeled P300 trials cannot cover two four-span messages.
 Run the supported development fusion matrix with:
 
 ```bash
-make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input artifacts/evaluation/counterfactual-input-development-v1/input.json --config configs/experiments/counterfactual_fusion_development.yaml --output artifacts/evaluation/counterfactual-fusion-development-v1"
+make counterfactual-evaluation
 ```
 
+This Step 5 command verifies the Step 4 input manifest, requires the exact embedded development
+specification, evaluates A–F plus the four supported ablations, writes result JSON,
+trial/mapping JSONL, metric/interval CSV and a checksum manifest under
+`artifacts/evaluation/counterfactual-fusion-development-v1/`, then reads the artifacts back before
+succeeding. Add `COUNTERFACTUAL_EVALUATION_ARGS="--overwrite"` when intentionally replacing an
+existing local development result.
+
 The runner preserves the source flash stream and changes only which visible tile occupies the
-recorded target signature. It writes result JSON, trial/mapping JSONL, metric/interval CSV, and a
-checksum manifest under the requested output directory. Protocol v2 keeps the
+recorded target signature. Protocol v2 keeps the
 synthetic profile and message-span identity separate from the recorded EEG subject, records
 whether the intended phrase was actually visible, and derives replay duration from the source
 flash onsets. Conditions D–F require

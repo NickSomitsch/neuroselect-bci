@@ -40,6 +40,12 @@ distinct labeled EEG selection trials, and records all source checksums. Run it 
 `configs/experiments/counterfactual_fusion_development.yaml`; this limited evidence is always
 non-claim-eligible.
 
+Run Step 5 with `make counterfactual-evaluation`. The command refuses any fusion configuration
+that differs from the specification embedded in the prepared input, requires complete paired
+trial and interval coverage, and reads the written artifacts back through the strict verifier.
+Use `COUNTERFACTUAL_EVALUATION_ARGS="--overwrite"` only when intentionally replacing the local
+development result.
+
 ## Research report
 
 After producing local artifacts, run:

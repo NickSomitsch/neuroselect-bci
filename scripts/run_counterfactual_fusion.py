@@ -11,6 +11,7 @@ from neuroselect.evaluation import (
     CounterfactualFusionRunner,
     load_counterfactual_input,
     load_counterfactual_spec,
+    read_counterfactual_artifacts,
     write_counterfactual_artifacts,
 )
 from neuroselect.evaluation.counterfactual_preparation import (
@@ -71,12 +72,18 @@ def git_state() -> tuple[str, str | None]:
 def main() -> None:
     args = parse_args()
     input_manifest = args.input.parent / "manifest.json"
+    verified_input_manifest = None
     if args.input.name == "input.json" and input_manifest.exists():
-        experiment_input, _ = read_counterfactual_input_artifacts(args.input.parent)
+        experiment_input, verified_input_manifest = read_counterfactual_input_artifacts(
+            args.input.parent
+        )
     else:
         experiment_input = load_counterfactual_input(args.input)
     spec = load_counterfactual_spec(args.config)
-    experiment_input = experiment_input.model_copy(update={"spec": spec})
+    if experiment_input.spec != spec:
+        raise ValueError(
+            "fusion configuration does not match the specification embedded in the prepared input"
+        )
     result = CounterfactualFusionRunner(experiment_input).run()
     revision, source_tree_sha256 = git_state()
     manifest = write_counterfactual_artifacts(
@@ -86,9 +93,17 @@ def main() -> None:
         source_tree_sha256=source_tree_sha256,
         overwrite=args.overwrite,
     )
+    restored_result, restored_manifest = read_counterfactual_artifacts(args.output)
+    if restored_result != result or restored_manifest != manifest:
+        raise ValueError("written counterfactual evaluation failed read-back verification")
     print(f"Run: {result.run_id}")
+    print(
+        "Prepared input manifest verified: "
+        f"{'yes' if verified_input_manifest is not None else 'not supplied'}"
+    )
     print(f"Source trials: {len(result.mapping_provenance)}")
     print(f"Condition trials: {len(result.trial_records)}")
+    print(f"Paired intervals: {len(result.paired_intervals)}")
     print(f"Claim eligible: {result.claim_eligible}")
     for metrics in (item for item in result.metrics if item.profile_id is None):
         print(

@@ -470,7 +470,55 @@ class CounterfactualFusionResult(BaseModel):
         conditions = {record.condition for record in self.trial_records}
         if conditions != set(self.spec.conditions):
             raise ValueError("counterfactual records must cover every requested condition")
+        trial_keys_by_condition: dict[EvaluationCondition, set[tuple[str, str, int]]] = {}
+        for condition in self.spec.conditions:
+            condition_keys = [
+                (record.profile_id, record.message_id, record.span_index)
+                for record in self.trial_records
+                if record.condition is condition
+            ]
+            if len(condition_keys) != len(set(condition_keys)):
+                raise ValueError(
+                    "counterfactual records must contain one row per condition and trial"
+                )
+            trial_keys_by_condition[condition] = set(condition_keys)
+        reference_trial_keys = trial_keys_by_condition[self.spec.conditions[0]]
+        if any(
+            trial_keys != reference_trial_keys for trial_keys in trial_keys_by_condition.values()
+        ):
+            raise ValueError("paired counterfactual conditions must cover identical logical trials")
+        if len(self.mapping_provenance) != len(reference_trial_keys):
+            raise ValueError("counterfactual mapping provenance must cover every paired trial")
+        source_trials = [
+            (item.subject_id, item.session_id, item.source_trial_id)
+            for item in self.mapping_provenance
+        ]
+        if len(source_trials) != len(set(source_trials)):
+            raise ValueError("counterfactual mapping provenance must use distinct source trials")
         overall = {metric.condition for metric in self.metrics if metric.profile_id is None}
         if overall != set(self.spec.conditions):
             raise ValueError("counterfactual metrics must cover every requested condition")
+        expected_intervals = (
+            {
+                (condition, metric)
+                for condition in self.spec.conditions
+                if condition is not EvaluationCondition.F_COMPLETE_SYSTEM
+                for metric in (
+                    "top_1_candidate_recall",
+                    "selection_completion_rate",
+                )
+            }
+            if EvaluationCondition.F_COMPLETE_SYSTEM in self.spec.conditions
+            else set()
+        )
+        actual_intervals = {
+            (interval.condition, interval.metric) for interval in self.paired_intervals
+        }
+        if (
+            len(actual_intervals) != len(self.paired_intervals)
+            or actual_intervals != expected_intervals
+        ):
+            raise ValueError(
+                "counterfactual paired intervals must cover the complete comparison matrix"
+            )
         return self
