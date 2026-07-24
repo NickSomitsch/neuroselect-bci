@@ -130,6 +130,20 @@ Training validates every corpus checksum, masks the prompt loss, evaluates the h
 test split, and writes a checksum-addressed adapter manifest. Model weights, corpora, and adapters
 remain ignored local artifacts; setup and CI never download them.
 
+Run the Step 3 held-out natural-candidate development evaluation with:
+
+```bash
+make language-evaluation
+```
+
+The tracked development recipe selects one test message per synthetic profile, verifies every
+corpus and adapter checksum, generates candidates without inserting the intended span, and writes
+generic-versus-personalized availability and ranking artifacts under
+`artifacts/evaluation/held-out-language-personalization-dev-v1/`. It expects adapters named
+`<profile-id>-dev-v1` under `artifacts/models/language-lora/`. Limited runs and development
+adapters are always non-claim-eligible. The artifact also reports narrowly repaired outer-JSON
+closers separately from unrecoverable candidate-generation failures.
+
 Run the current CPU-only candidate → RAG → simulated-neural → fusion slice with:
 
 ```bash

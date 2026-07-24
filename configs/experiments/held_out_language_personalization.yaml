@@ -1,0 +1,10 @@
+schema_version: "1.0"
+experiment_id: held-out-language-personalization-dev-v1
+protocol_revision: held-out-language-personalization-v1
+seed: 20260724
+split: test
+candidate_count: 8
+maximum_phrase_tokens: 4
+retrieval_at: 2026-07-18T12:00:00+00:00
+evidence_tier: development
+maximum_messages_per_profile: 1

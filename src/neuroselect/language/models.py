@@ -171,6 +171,7 @@ class GenerationDiagnostics(BaseModel):
     selected_language_count: int = Field(ge=1)
     unused_valid_count: int = Field(ge=0)
     rejected_by_reason: dict[ProposalRejectionReason, int]
+    backend_output_repaired: bool = False
 
 
 class CandidateGenerationResult(BaseModel):

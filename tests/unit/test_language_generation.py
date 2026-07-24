@@ -223,6 +223,49 @@ def test_structured_response_parser_accepts_only_the_versioned_shape() -> None:
             parse_structured_proposals(invalid)
 
 
+@pytest.mark.parametrize(
+    "payload",
+    (
+        ('{"candidates":[{"text":"hello","support":0.7},{"text":"thank you","support":0.3}]'),
+        ('{"candidates":[{"text":"hello","support":0.7},{"text":"thank you","support":0.3}]}}'),
+    ),
+)
+def test_structured_response_parser_repairs_only_outer_collection_closers(
+    payload: str,
+) -> None:
+    assert parse_structured_proposals(payload) == (
+        proposal("hello", 0.7),
+        proposal("thank you", 0.3),
+    )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    (
+        (
+            '```json\n{"candidates":[{"text":"hello","support":0.7},'
+            '{"text":"thank you","support":0.3}]}\n```'
+        ),
+        (
+            '{"candidates":[{"text":"hello","support":0.7},'
+            '{"text":"thank you","support":0.3}] trailing'
+        ),
+        ('{"candidates":[{"text":"hello","support":0.7},{"text":"thank you","support":0.3,}]'),
+        (
+            '{"candidates":[{"text":"hello","support":0.7},'
+            '{"text":"thank you","support":0.3,"unknown":true}]'
+        ),
+        ('{"candidates":[{"text":"hello","support":0.7},,{"text":"thank you","support":0.3}]'),
+        ('{"candidates":[{"text":"hello","support":0.7},{"text":"thank you","support":0.3},]'),
+    ),
+)
+def test_structured_response_parser_rejects_inner_corruption_and_extra_content(
+    payload: str,
+) -> None:
+    with pytest.raises(CandidateGenerationError, match="invalid structured"):
+        parse_structured_proposals(payload)
+
+
 def test_fixture_configuration_is_strict_and_versioned(tmp_path: Path) -> None:
     config = load_fixture_backend_config(FIXTURE_CONFIG_PATH)
     assert config.schema_version == "1.0"

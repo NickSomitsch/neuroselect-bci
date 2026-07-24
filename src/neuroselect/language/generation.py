@@ -48,12 +48,66 @@ class CandidateBackend(Protocol):
 def parse_structured_proposals(payload: str) -> tuple[CandidateProposal, ...]:
     """Parse the strict JSON contract used by future constrained-model adapters."""
 
+    proposals, _ = _parse_structured_proposals_with_diagnostics(payload)
+    return proposals
+
+
+def _parse_structured_proposals_with_diagnostics(
+    payload: str,
+) -> tuple[tuple[CandidateProposal, ...], bool]:
+    """Parse strict JSON or recover only malformed outer collection closers."""
+
     try:
         decoded = json.loads(payload)
         response = StructuredCandidateResponse.model_validate(decoded)
     except (json.JSONDecodeError, ValidationError) as error:
-        raise CandidateGenerationError("backend returned invalid structured candidates") from error
-    return response.candidates
+        try:
+            recovered = _recover_candidate_objects(payload)
+            response = StructuredCandidateResponse(candidates=recovered)
+        except (json.JSONDecodeError, ValidationError, ValueError):
+            raise CandidateGenerationError(
+                "backend returned invalid structured candidates"
+            ) from error
+        return response.candidates, True
+    return response.candidates, False
+
+
+def _recover_candidate_objects(payload: str) -> tuple[CandidateProposal, ...]:
+    """Recover valid candidate objects when only the outer closers are malformed."""
+
+    stripped = payload.strip()
+    prefix = re.match(r'^\{\s*"candidates"\s*:\s*\[', stripped)
+    if prefix is None:
+        raise ValueError("candidate payload does not start with the required object")
+    decoder = json.JSONDecoder()
+    position = prefix.end()
+    candidates: list[CandidateProposal] = []
+    while position < len(stripped):
+        while position < len(stripped) and stripped[position].isspace():
+            position += 1
+        if position >= len(stripped) or stripped[position] in "]}":
+            break
+        decoded, position = decoder.raw_decode(stripped, position)
+        candidates.append(CandidateProposal.model_validate(decoded))
+        while position < len(stripped) and stripped[position].isspace():
+            position += 1
+        if position >= len(stripped) or stripped[position] in "]}":
+            break
+        if stripped[position] != ",":
+            raise ValueError("candidate objects must be separated by one comma")
+        position += 1
+        next_position = position
+        while next_position < len(stripped) and stripped[next_position].isspace():
+            next_position += 1
+        if next_position >= len(stripped) or stripped[next_position] in "]},":
+            raise ValueError("candidate object separator must precede another object")
+        position = next_position
+    if not candidates:
+        raise ValueError("candidate payload contains no valid candidate objects")
+    remainder = stripped[position:]
+    if any(not character.isspace() and character not in "]}" for character in remainder):
+        raise ValueError("candidate payload contains content outside the candidate objects")
+    return tuple(candidates)
 
 
 def _normalize_visible_text(value: str) -> str:
@@ -197,6 +251,7 @@ class CandidateGenerator:
                 selected_language_count=len(language_candidates),
                 unused_valid_count=len(valid) - len(selected),
                 rejected_by_reason=dict(rejected),
+                backend_output_repaired=bool(getattr(self.backend, "last_output_repaired", False)),
             ),
         )
 

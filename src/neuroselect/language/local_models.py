@@ -13,7 +13,6 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from neuroselect.language.generation import (
     CandidateGenerationError,
-    parse_structured_proposals,
 )
 from neuroselect.language.models import (
     BackendMetadata,
@@ -319,6 +318,7 @@ class LocalModelCandidateBackend:
             adapter_path=adapter_path,
             allow_download=allow_download,
         )
+        self.last_output_repaired = False
 
     def generate(self, request: CandidateGenerationRequest) -> tuple[CandidateProposal, ...]:
         language_quota = request.candidate_count - 3
@@ -328,7 +328,11 @@ class LocalModelCandidateBackend:
         )
         messages = _generation_messages(request, proposal_count=proposal_count)
         raw = self.runtime.generate(messages, max_tokens=self.config.generation.maximum_new_tokens)
-        proposals = parse_structured_proposals(raw)
+        from neuroselect.language.generation import (
+            _parse_structured_proposals_with_diagnostics,
+        )
+
+        proposals, self.last_output_repaired = _parse_structured_proposals_with_diagnostics(raw)
         support = self.score_texts(request, tuple(proposal.text for proposal in proposals))
         return tuple(
             proposal.model_copy(update={"support": score})

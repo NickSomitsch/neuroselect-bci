@@ -22,6 +22,19 @@ from neuroselect.evaluation.counterfactual_models import (
     CounterfactualTrialProvenance,
     PairedBootstrapInterval,
 )
+from neuroselect.evaluation.language_artifacts import (
+    read_held_out_language_artifacts,
+    write_held_out_language_artifacts,
+)
+from neuroselect.evaluation.language_benchmark import (
+    HeldOutLanguageBenchmarkRunner,
+    HeldOutLanguageResult,
+    HeldOutLanguageSpec,
+    LanguageBenchmarkMetrics,
+    LanguageBenchmarkTrial,
+    LanguageProfileRuntime,
+    load_held_out_language_spec,
+)
 from neuroselect.evaluation.metrics import calculate_metrics, expected_calibration_error
 from neuroselect.evaluation.models import (
     ConditionAvailability,
@@ -59,6 +72,12 @@ __all__ = [
     "EvaluationTiming",
     "ExperimentConfigurationError",
     "ExperimentResult",
+    "HeldOutLanguageBenchmarkRunner",
+    "HeldOutLanguageResult",
+    "HeldOutLanguageSpec",
+    "LanguageBenchmarkMetrics",
+    "LanguageBenchmarkTrial",
+    "LanguageProfileRuntime",
     "NeuralMode",
     "PairedBootstrapInterval",
     "RankingMode",
@@ -75,8 +94,11 @@ __all__ = [
     "load_counterfactual_input",
     "load_counterfactual_spec",
     "load_experiment_spec",
+    "load_held_out_language_spec",
     "read_counterfactual_artifacts",
+    "read_held_out_language_artifacts",
     "shuffle_retrieval_across_candidates",
     "write_counterfactual_artifacts",
     "write_experiment_artifacts",
+    "write_held_out_language_artifacts",
 ]

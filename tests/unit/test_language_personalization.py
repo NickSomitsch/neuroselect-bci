@@ -127,6 +127,20 @@ def test_local_backend_replaces_self_reported_support_with_likelihoods() -> None
     assert result.backend.deterministic is False
 
 
+def test_local_backend_marks_outer_json_repair_in_generation_diagnostics() -> None:
+    response = (
+        '{"candidates":[{"text":"alpha","support":1.0},'
+        '{"text":"beta","support":0.0},{"text":"gamma ray","support":0.0},'
+        '{"text":"delta","support":0.0}]'
+    )
+    runtime = FakeRuntime(response=response)
+    backend = LocalModelCandidateBackend(load_local_model_config(MODEL_CONFIG), runtime=runtime)
+
+    result = CandidateGenerator(backend).generate(CandidateGenerationRequest(candidate_count=6))
+
+    assert result.diagnostics.backend_output_repaired is True
+
+
 def test_local_backend_fails_on_bad_runtime_scores_and_output() -> None:
     config = load_local_model_config(MODEL_CONFIG)
     request = CandidateGenerationRequest(candidate_count=4)
