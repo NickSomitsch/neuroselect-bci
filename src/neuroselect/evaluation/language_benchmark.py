@@ -300,6 +300,67 @@ class LanguageProfileRuntime:
     cleanup: Callable[[], None] | None = None
 
 
+LanguageTrialCallback = Callable[[LanguageBenchmarkTrial, int, int], None]
+
+
+def select_held_out_messages(
+    spec: HeldOutLanguageSpec,
+    messages: tuple[BenchmarkMessage, ...],
+) -> tuple[BenchmarkMessage, ...]:
+    """Apply the protocol's deterministic per-profile message selection."""
+
+    limit = spec.maximum_messages_per_profile
+    if limit is None or limit >= len(messages):
+        return messages
+    ordered = sorted(
+        messages,
+        key=lambda message: hashlib.sha256(f"{spec.seed}:{message.message_id}".encode()).digest(),
+    )
+    return tuple(ordered[:limit])
+
+
+def held_out_language_run_id(
+    *,
+    spec: HeldOutLanguageSpec,
+    benchmark_source_sha256: str,
+    backend: BackendMetadata,
+    adapters: dict[str, PersonalizationAdapterManifest],
+    candidate_vocabulary_sha256: str | None,
+) -> str:
+    """Build the stable run identity shared by execution and checkpoints."""
+
+    identity = "\0".join(
+        (
+            spec.digest(),
+            benchmark_source_sha256,
+            _canonical_json(backend.model_dump(mode="json")),
+            candidate_vocabulary_sha256 or "unconstrained",
+            *(adapters[profile_id].digest() for profile_id in sorted(adapters)),
+        )
+    )
+    return f"held-out-language-{_sha256_text(identity)[:20]}"
+
+
+def expected_language_trial_count(
+    spec: HeldOutLanguageSpec,
+    benchmark: GeneratedBenchmark,
+) -> int:
+    """Count target spans selected by the locked protocol."""
+
+    total = 0
+    for profile_id in sorted(benchmark.profile_ids):
+        messages = tuple(
+            message
+            for message in benchmark.messages[spec.split]
+            if message.profile_id == profile_id
+        )
+        selected = select_held_out_messages(spec, messages)
+        if not selected:
+            raise ValueError(f"no held-out messages selected for {profile_id}")
+        total += sum(len(message.target_spans) for message in selected)
+    return total
+
+
 def _rank(
     values: dict[str, float],
     *,
@@ -409,6 +470,8 @@ class HeldOutLanguageBenchmarkRunner:
         runtimes: tuple[LanguageProfileRuntime, ...],
         generated_at: datetime | None = None,
         candidate_vocabulary_sha256: str | None = None,
+        resumed_trials: tuple[LanguageBenchmarkTrial, ...] = (),
+        progress_callback: LanguageTrialCallback | None = None,
     ) -> HeldOutLanguageResult:
         runtime_by_profile = {runtime.profile.profile_id: runtime for runtime in runtimes}
         if len(runtime_by_profile) != len(runtimes) or set(runtime_by_profile) != set(
@@ -419,6 +482,10 @@ class HeldOutLanguageBenchmarkRunner:
         records: list[LanguageBenchmarkTrial] = []
         adapters: dict[str, PersonalizationAdapterManifest] = {}
         corpus_digests: dict[str, str] = {}
+        resumed_by_id = {trial.trial_id: trial for trial in resumed_trials}
+        if len(resumed_by_id) != len(resumed_trials):
+            raise ValueError("resumed language trials contain duplicate trial IDs")
+        expected_trial_count = expected_language_trial_count(self.spec, benchmark)
 
         for profile_id in sorted(runtime_by_profile):
             runtime = runtime_by_profile[profile_id]
@@ -454,30 +521,52 @@ class HeldOutLanguageBenchmarkRunner:
                 for message in benchmark.messages[self.spec.split]
                 if message.profile_id == profile_id
             )
-            messages = self._select_messages(messages)
+            messages = select_held_out_messages(self.spec, messages)
             if not messages:
                 raise ValueError(f"no held-out messages selected for {profile_id}")
             try:
                 for message in messages:
-                    records.extend(self._evaluate_message(message, pipeline, manifest))
+                    confirmed: list[str] = []
+                    for span_index, intended_text in enumerate(message.target_spans):
+                        context = " ".join(confirmed)
+                        trial_id = f"language-{message.message_id}-{span_index:02d}"
+                        resumed = resumed_by_id.pop(trial_id, None)
+                        if resumed is not None:
+                            self._validate_resumed_trial(
+                                resumed,
+                                message=message,
+                                span_index=span_index,
+                                intended_text=intended_text,
+                                context=context,
+                                adapter=manifest,
+                            )
+                            record = resumed
+                        else:
+                            record = self._evaluate_span(
+                                message=message,
+                                span_index=span_index,
+                                intended_text=intended_text,
+                                context=context,
+                                pipeline=pipeline,
+                                adapter=manifest,
+                            )
+                        records.append(record)
+                        if resumed is None and progress_callback is not None:
+                            progress_callback(record, len(records), expected_trial_count)
+                        confirmed.append(intended_text)
             finally:
                 del pipeline
                 if runtime.cleanup is not None:
                     runtime.cleanup()
 
+        if resumed_by_id:
+            raise ValueError(
+                f"resumed language trials are not part of this protocol: {sorted(resumed_by_id)}"
+            )
         assert backend is not None
         record_tuple = tuple(records)
         profile_metrics = tuple(
             _metrics(record_tuple, profile_id=profile_id) for profile_id in sorted(adapters)
-        )
-        identity = "\0".join(
-            (
-                self.spec.digest(),
-                benchmark.source_sha256,
-                _canonical_json(backend.model_dump(mode="json")),
-                candidate_vocabulary_sha256 or "unconstrained",
-                *(adapters[profile_id].digest() for profile_id in sorted(adapters)),
-            )
         )
         claim_eligible = (
             self.spec.evidence_tier == "research"
@@ -511,7 +600,13 @@ class HeldOutLanguageBenchmarkRunner:
             )
         return HeldOutLanguageResult(
             schema_version="1.0",
-            run_id=f"held-out-language-{_sha256_text(identity)[:20]}",
+            run_id=held_out_language_run_id(
+                spec=self.spec,
+                benchmark_source_sha256=benchmark.source_sha256,
+                backend=backend,
+                adapters=adapters,
+                candidate_vocabulary_sha256=candidate_vocabulary_sha256,
+            ),
             generated_at=generated_at or datetime.now(UTC),
             config_sha256=self.spec.digest(),
             benchmark_source_sha256=benchmark.source_sha256,
@@ -526,119 +621,124 @@ class HeldOutLanguageBenchmarkRunner:
             limitations=tuple(limitations),
         )
 
-    def _select_messages(
-        self, messages: tuple[BenchmarkMessage, ...]
-    ) -> tuple[BenchmarkMessage, ...]:
-        limit = self.spec.maximum_messages_per_profile
-        if limit is None or limit >= len(messages):
-            return messages
-        ordered = sorted(
-            messages,
-            key=lambda message: hashlib.sha256(
-                f"{self.spec.seed}:{message.message_id}".encode()
-            ).digest(),
-        )
-        return tuple(ordered[:limit])
-
-    def _evaluate_message(
-        self,
+    @staticmethod
+    def _validate_resumed_trial(
+        trial: LanguageBenchmarkTrial,
+        *,
         message: BenchmarkMessage,
+        span_index: int,
+        intended_text: str,
+        context: str,
+        adapter: PersonalizationAdapterManifest,
+    ) -> None:
+        expected = {
+            "trial_id": f"language-{message.message_id}-{span_index:02d}",
+            "profile_id": message.profile_id,
+            "message_id": message.message_id,
+            "span_index": span_index,
+            "message_span_count": len(message.target_spans),
+            "confirmed_context": context,
+            "intended_text": intended_text,
+            "adapter_id": adapter.adapter_id,
+            "adapter_sha256": adapter.adapter_sha256,
+        }
+        actual = {field: getattr(trial, field) for field in expected}
+        if actual != expected:
+            raise ValueError(
+                f"resumed trial {trial.trial_id!r} does not match the selected protocol span"
+            )
+
+    def _evaluate_span(
+        self,
+        *,
+        message: BenchmarkMessage,
+        span_index: int,
+        intended_text: str,
+        context: str,
         pipeline: PersonalizedLanguagePipeline,
         adapter: PersonalizationAdapterManifest,
-    ) -> tuple[LanguageBenchmarkTrial, ...]:
-        records: list[LanguageBenchmarkTrial] = []
-        confirmed: list[str] = []
-        for span_index, intended_text in enumerate(message.target_spans):
-            context = " ".join(confirmed)
-            trial_id = f"language-{message.message_id}-{span_index:02d}"
-            request = CandidateGenerationRequest(
-                confirmed_text=context,
-                candidate_count=self.spec.candidate_count,
-                maximum_phrase_tokens=self.spec.maximum_phrase_tokens,
+    ) -> LanguageBenchmarkTrial:
+        trial_id = f"language-{message.message_id}-{span_index:02d}"
+        request = CandidateGenerationRequest(
+            confirmed_text=context,
+            candidate_count=self.spec.candidate_count,
+            maximum_phrase_tokens=self.spec.maximum_phrase_tokens,
+        )
+        try:
+            result = pipeline.generate(
+                request,
+                profile_id=message.profile_id,
+                at_time=self.spec.retrieval_at,
             )
-            try:
-                result = pipeline.generate(
-                    request,
-                    profile_id=message.profile_id,
-                    at_time=self.spec.retrieval_at,
-                )
-            except CandidateGenerationError as error:
-                records.append(
-                    LanguageBenchmarkTrial(
-                        trial_id=trial_id,
-                        profile_id=message.profile_id,
-                        message_id=message.message_id,
-                        span_index=span_index,
-                        message_span_count=len(message.target_spans),
-                        confirmed_context=context,
-                        intended_text=intended_text,
-                        candidate_generation_failed=True,
-                        backend_output_repaired=False,
-                        failure_reason=str(error),
-                        adapter_id=adapter.adapter_id,
-                        adapter_sha256=adapter.adapter_sha256,
-                    )
-                )
-                confirmed.append(intended_text)
-                continue
+        except CandidateGenerationError as error:
+            return LanguageBenchmarkTrial(
+                trial_id=trial_id,
+                profile_id=message.profile_id,
+                message_id=message.message_id,
+                span_index=span_index,
+                message_span_count=len(message.target_spans),
+                confirmed_context=context,
+                intended_text=intended_text,
+                candidate_generation_failed=True,
+                backend_output_repaired=False,
+                failure_reason=str(error),
+                adapter_id=adapter.adapter_id,
+                adapter_sha256=adapter.adapter_sha256,
+            )
 
-            candidates = result.generation.candidate_set.candidates
-            language_candidates = tuple(
-                candidate for candidate in candidates if candidate.kind is not CandidateKind.CONTROL
-            )
-            intended = next(
-                (
-                    candidate
-                    for candidate in language_candidates
-                    if _normalized_text(candidate.text) == _normalized_text(intended_text)
-                ),
-                None,
-            )
-            intended_id = intended.candidate_id if intended is not None else None
-            candidate_order = tuple(candidate.candidate_id for candidate in language_candidates)
-            other_id = next(
-                candidate_id
-                for candidate_id, action in result.generation.control_actions.items()
-                if action.value == "other"
-            )
-            records.append(
-                LanguageBenchmarkTrial(
-                    trial_id=trial_id,
-                    profile_id=message.profile_id,
-                    message_id=message.message_id,
-                    span_index=span_index,
-                    message_span_count=len(message.target_spans),
-                    confirmed_context=context,
-                    intended_text=intended_text,
-                    backend_output_repaired=(result.generation.diagnostics.backend_output_repaired),
-                    candidate_set=result.generation.candidate_set,
-                    intended_candidate_id=intended_id,
-                    other_candidate_id=other_id,
-                    generic_language_support=result.generation.generic_language_support,
-                    personalization_support=result.personalization_support,
-                    personalization_lift=result.personalization_lift,
-                    retrieval_evidence=result.retrieval_evidence,
-                    generic_rank=(
-                        _rank(
-                            result.generation.generic_language_support,
-                            target_id=intended_id,
-                            candidate_order=candidate_order,
-                        )
-                        if intended_id is not None
-                        else None
-                    ),
-                    personalized_rank=(
-                        _rank(
-                            result.personalization_support,
-                            target_id=intended_id,
-                            candidate_order=candidate_order,
-                        )
-                        if intended_id is not None
-                        else None
-                    ),
-                    adapter_id=adapter.adapter_id,
-                    adapter_sha256=adapter.adapter_sha256,
+        candidates = result.generation.candidate_set.candidates
+        language_candidates = tuple(
+            candidate for candidate in candidates if candidate.kind is not CandidateKind.CONTROL
+        )
+        intended = next(
+            (
+                candidate
+                for candidate in language_candidates
+                if _normalized_text(candidate.text) == _normalized_text(intended_text)
+            ),
+            None,
+        )
+        intended_id = intended.candidate_id if intended is not None else None
+        candidate_order = tuple(candidate.candidate_id for candidate in language_candidates)
+        other_id = next(
+            candidate_id
+            for candidate_id, action in result.generation.control_actions.items()
+            if action.value == "other"
+        )
+        return LanguageBenchmarkTrial(
+            trial_id=trial_id,
+            profile_id=message.profile_id,
+            message_id=message.message_id,
+            span_index=span_index,
+            message_span_count=len(message.target_spans),
+            confirmed_context=context,
+            intended_text=intended_text,
+            backend_output_repaired=result.generation.diagnostics.backend_output_repaired,
+            candidate_set=result.generation.candidate_set,
+            intended_candidate_id=intended_id,
+            other_candidate_id=other_id,
+            generic_language_support=result.generation.generic_language_support,
+            personalization_support=result.personalization_support,
+            personalization_lift=result.personalization_lift,
+            retrieval_evidence=result.retrieval_evidence,
+            generic_rank=(
+                _rank(
+                    result.generation.generic_language_support,
+                    target_id=intended_id,
+                    candidate_order=candidate_order,
                 )
-            )
-            confirmed.append(intended_text)
-        return tuple(records)
+                if intended_id is not None
+                else None
+            ),
+            personalized_rank=(
+                _rank(
+                    result.personalization_support,
+                    target_id=intended_id,
+                    candidate_order=candidate_order,
+                )
+                if intended_id is not None
+                else None
+            ),
+            adapter_id=adapter.adapter_id,
+            adapter_sha256=adapter.adapter_sha256,
+        )

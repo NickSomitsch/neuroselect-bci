@@ -64,11 +64,11 @@ def write_held_out_language_artifacts(
     captured_packages, captured_device = capture_runtime_environment()
     if package_versions is None:
         package_versions = captured_packages
-        mlx_lm_version: str | None = None
-        with suppress(PackageNotFoundError):
-            mlx_lm_version = version("mlx-lm")
-        if mlx_lm_version is not None:
-            package_versions = {**package_versions, "mlx-lm": mlx_lm_version}
+        mlx_versions: dict[str, str] = {}
+        for package in ("mlx", "mlx-lm"):
+            with suppress(PackageNotFoundError):
+                mlx_versions[package] = version(package)
+        package_versions = {**package_versions, **mlx_versions}
     risk_policy = load_candidate_risk_policy()
     retrieval_policy = load_retrieval_policy()
     manifest = RunManifest(

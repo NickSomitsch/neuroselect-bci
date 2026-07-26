@@ -150,6 +150,48 @@ closers separately from unrecoverable candidate-generation failures. Target avai
 that the exact held-out next phrase appeared as one of the visible language candidates; an absent
 target cannot receive a generic or personalized rank.
 
+Run the full 3,990-span Step 11 research evaluation on an MLX-compatible Colab GPU with the
+tracked [Colab notebook](notebooks/neuroselect_step11_colab.ipynb). First create the portable
+input archive locally:
+
+```bash
+make language-cloud-bundle LANGUAGE_CLOUD_BUNDLE_ARGS="--overwrite"
+make language-cloud-verify \
+  LANGUAGE_CLOUD_BUNDLE=artifacts/cloud/step11-language-inputs-v1.tar.gz
+```
+
+The approximately 113 MB ignored archive contains only the four final research adapters and
+checksum-verified personalization corpora. It excludes intermediate adapter checkpoints and the
+Qwen base model. Upload the archive to
+`MyDrive/neuroselect-step11/step11-language-inputs-v1.tar.gz`, push the implementation commit,
+paste that exact commit SHA into the notebook, and run its cells in order. The notebook:
+
+- rejects GPUs below CUDA compute capability 7.5 before installation;
+- installs the locked Python 3.12 and `local-language-cuda` environment;
+- safely verifies and extracts the adapter/corpus archive;
+- downloads the exact pinned Qwen revision once into a persistent Drive cache;
+- runs a short development-limit pilot with all four research adapters;
+- checkpoints every five new research trials to Drive and resumes only when every input identity
+  matches; and
+- verifies all 3,990 ordered trials, clean Git provenance, checksums, and claim eligibility.
+
+The canonical result and an export archive remain under `MyDrive/neuroselect-step11/`. On a Linux
+CUDA host, the equivalent full command is:
+
+```bash
+make local-language-cuda-sync
+make language-cuda-preflight
+make language-model-cache LANGUAGE_MODEL_CACHE_ARGS="--download"
+make language-research-evaluation-cuda LANGUAGE_RESEARCH_EVALUATION_ARGS="\
+  --checkpoint-dir /persistent/neuroselect-step11/checkpoint-v1 \
+  --resume --checkpoint-every 5 --progress-every 25 --overwrite"
+make language-research-verify
+```
+
+`--resume` never mixes trials across code, protocol, model, adapter, corpus, or vocabulary
+changes. The final artifact records CUDA device provenance. See
+[the Step 11 Colab runbook](docs/step11-colab.md) for the exact handoff and recovery workflow.
+
 Run the current CPU-only candidate → RAG → simulated-neural → fusion slice with:
 
 ```bash

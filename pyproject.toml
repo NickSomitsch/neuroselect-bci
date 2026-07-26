@@ -33,6 +33,10 @@ dependencies = [
 local-language = [
   "mlx-lm[train]>=0.31.3,<0.32; sys_platform == 'darwin' and platform_machine == 'arm64'",
 ]
+local-language-cuda = [
+  "mlx-lm[train]>=0.31.3,<0.32; sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "mlx[cuda12]==0.32.0; sys_platform == 'linux' and platform_machine == 'x86_64'",
+]
 
 [project.urls]
 Repository = "https://github.com/NickSomitsch/neuroselect-bci"

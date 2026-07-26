@@ -378,6 +378,44 @@ def test_runner_records_generation_failure_and_rejects_bad_provenance() -> None:
             )
 
 
+def test_runner_resumes_only_exact_protocol_trials() -> None:
+    with SQLiteKnowledgeStore(":memory:") as store:
+        runtime = build_runtime(store)
+        runner = HeldOutLanguageBenchmarkRunner(spec())
+        original = runner.run(
+            benchmark=benchmark(),
+            runtimes=(runtime,),
+            generated_at=NOW,
+        )
+        callbacks: list[tuple[str, int, int]] = []
+        resumed = runner.run(
+            benchmark=benchmark(),
+            runtimes=(runtime,),
+            generated_at=NOW,
+            resumed_trials=original.trials[:2],
+            progress_callback=lambda trial, completed, total: callbacks.append(
+                (trial.trial_id, completed, total)
+            ),
+        )
+
+        assert resumed == original
+        assert callbacks == [(original.trials[2].trial_id, 3, 3)]
+
+        mismatched = original.trials[0].model_copy(update={"confirmed_context": "wrong"})
+        with pytest.raises(ValueError, match="does not match"):
+            runner.run(
+                benchmark=benchmark(),
+                runtimes=(runtime,),
+                resumed_trials=(mismatched,),
+            )
+        with pytest.raises(ValueError, match="duplicate trial IDs"):
+            runner.run(
+                benchmark=benchmark(),
+                runtimes=(runtime,),
+                resumed_trials=(original.trials[0], original.trials[0]),
+            )
+
+
 def test_full_research_configuration_controls_claim_eligibility() -> None:
     with SQLiteKnowledgeStore(":memory:") as store:
         runtime = build_runtime(store, trainer_revision="neuroselect-mlx-lora-v1")

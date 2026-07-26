@@ -24,6 +24,7 @@ from neuroselect.language.personalization_data import personalization_prompt
 
 DEFAULT_LOCAL_MODEL_CONFIG = Path("configs/models/qwen3_4b_mlx.yaml")
 ChatMessage = dict[str, str]
+SUPPORTED_MLX_PLATFORMS = frozenset({("Darwin", "arm64"), ("Linux", "x86_64")})
 
 
 class LocalModelDependencyError(RuntimeError):
@@ -103,7 +104,8 @@ def resolve_local_model_source(config: LocalModelConfig, *, allow_download: bool
         hub = importlib.import_module("huggingface_hub")
     except ImportError as error:
         raise LocalModelDependencyError(
-            "MLX-LM is optional; install it with `uv sync --extra local-language`"
+            "MLX-LM is optional; install `local-language` on Apple silicon or "
+            "`local-language-cuda` on Linux"
         ) from error
     try:
         resolved: str = hub.snapshot_download(
@@ -237,10 +239,11 @@ class MlxLanguageRuntime:
     def _load(self) -> None:
         if self._model is not None:
             return
-        if platform.system() != "Darwin" or platform.machine() != "arm64":
+        runtime_platform = (platform.system(), platform.machine())
+        if runtime_platform not in SUPPORTED_MLX_PLATFORMS:
             raise LocalModelDependencyError(
-                "the tracked MLX backend requires Apple silicon; use the fixture backend on "
-                "other platforms"
+                "the tracked MLX backend requires Apple silicon or Linux x86_64 with an "
+                "MLX-compatible NVIDIA GPU"
             )
         try:
             mlx_lm = importlib.import_module("mlx_lm")
@@ -248,8 +251,19 @@ class MlxLanguageRuntime:
             sample_utils = importlib.import_module("mlx_lm.sample_utils")
         except ImportError as error:
             raise LocalModelDependencyError(
-                "MLX-LM is optional; install it with `uv sync --extra local-language`"
+                "MLX-LM is optional; install `local-language` on Apple silicon or "
+                "`local-language-cuda` on Linux"
             ) from error
+        if runtime_platform[0] == "Linux":
+            try:
+                self._mx.set_default_device(self._mx.gpu)
+                if self._mx.default_device().type != self._mx.gpu:
+                    raise RuntimeError("MLX did not select its GPU device")
+            except Exception as error:
+                raise LocalModelDependencyError(
+                    "Linux MLX loaded without a usable CUDA GPU; run the language CUDA "
+                    "preflight and choose a GPU with compute capability 7.5 or newer"
+                ) from error
 
         resolved_source = resolve_local_model_source(
             self.config, allow_download=self.allow_download

@@ -1,4 +1,4 @@
-.PHONY: setup sync local-language-sync ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report release-check release study-p-data study-p-research-data p300-baseline p300-research-baseline p300-research-audit p300-eegnet p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync local-language-cuda-sync language-cuda-preflight language-model-cache ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation language-research-evaluation-cuda language-research-verify language-cloud-bundle language-cloud-verify language-cloud-extract fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report release-check release study-p-data study-p-research-data p300-baseline p300-research-baseline p300-research-audit p300-eegnet p300-replay api format format-check lint typecheck test build package verify
 
 STUDY_P_RESEARCH_SUBJECTS = P_01 P_02 P_03 P_04 P_05 P_06 P_07 P_08 P_09 P_10 P_11 P_12 P_13 P_14 P_15 P_16 P_17 P_18 P_19
 
@@ -9,6 +9,15 @@ sync:
 
 local-language-sync:
 	uv sync --all-groups --extra local-language --locked
+
+local-language-cuda-sync:
+	uv sync --extra local-language-cuda --no-dev --locked
+
+language-cuda-preflight:
+	uv run --extra local-language-cuda --no-dev python scripts/check_language_cuda.py
+
+language-model-cache:
+	uv run --extra local-language-cuda --no-dev python scripts/cache_language_model.py $(LANGUAGE_MODEL_CACHE_ARGS)
 
 ui-install:
 	pnpm --dir ui install --frozen-lockfile
@@ -45,6 +54,32 @@ language-research-evaluation:
 		--adapter-suffix=-research-v1 \
 		--output artifacts/evaluation/held-out-language-personalization-research-v1 \
 		$(LANGUAGE_RESEARCH_EVALUATION_ARGS)
+
+language-research-evaluation-cuda:
+	uv run --extra local-language-cuda --no-dev python scripts/run_held_out_language_evaluation.py \
+		--config configs/experiments/held_out_language_personalization_research.yaml \
+		--adapter-suffix=-research-v1 \
+		--output artifacts/evaluation/held-out-language-personalization-research-v1 \
+		$(LANGUAGE_RESEARCH_EVALUATION_ARGS)
+
+language-research-verify:
+	uv run python scripts/verify_language_research_evaluation.py \
+		$(LANGUAGE_RESEARCH_VERIFY_ARGS)
+
+language-cloud-bundle:
+	uv run python scripts/manage_language_cloud_bundle.py create \
+		$(LANGUAGE_CLOUD_BUNDLE_ARGS)
+
+language-cloud-verify:
+	@test -n "$(LANGUAGE_CLOUD_BUNDLE)" || (echo "LANGUAGE_CLOUD_BUNDLE is required" >&2; exit 2)
+	uv run python scripts/manage_language_cloud_bundle.py verify \
+		$(LANGUAGE_CLOUD_BUNDLE)
+
+language-cloud-extract:
+	@test -n "$(LANGUAGE_CLOUD_BUNDLE)" || (echo "LANGUAGE_CLOUD_BUNDLE is required" >&2; exit 2)
+	uv run python scripts/manage_language_cloud_bundle.py extract \
+		$(LANGUAGE_CLOUD_BUNDLE) \
+		$(LANGUAGE_CLOUD_EXTRACT_ARGS)
 
 fusion-smoke:
 	uv run python scripts/run_fusion_smoke.py

@@ -6,13 +6,18 @@ import argparse
 import gc
 import hashlib
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
 from neuroselect.evaluation import (
     HeldOutLanguageBenchmarkRunner,
+    LanguageCheckpointIdentity,
+    LanguageCheckpointStore,
     LanguageProfileRuntime,
     build_held_out_candidate_vocabulary,
+    expected_language_trial_count,
+    held_out_language_run_id,
     load_held_out_language_spec,
     write_held_out_language_artifacts,
 )
@@ -67,6 +72,33 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=Path("artifacts/evaluation/held-out-language-personalization-dev-v1"),
     )
+    parser.add_argument(
+        "--checkpoint-dir",
+        type=Path,
+        help="Durable checkpoint directory (use Google Drive on Colab).",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume an exact matching checkpoint, or create it when absent.",
+    )
+    parser.add_argument(
+        "--checkpoint-every",
+        type=int,
+        default=5,
+        help="Fsync completed trials at this interval (default: 5).",
+    )
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        default=25,
+        help="Print progress at this completed-trial interval (default: 25).",
+    )
+    parser.add_argument(
+        "--download",
+        action="store_true",
+        help="Allow downloading the exact pinned model revision when it is not cached.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -111,6 +143,12 @@ def clear_mlx_cache() -> None:
 
 def main() -> None:
     args = parse_args()
+    if args.resume and args.checkpoint_dir is None:
+        raise ValueError("--resume requires --checkpoint-dir")
+    if args.checkpoint_every < 1 or args.progress_every < 1:
+        raise ValueError("checkpoint and progress intervals must be positive")
+
+    revision, source_tree_sha256 = git_state()
     spec = load_held_out_language_spec(args.config)
     model_config = load_local_model_config(args.model_config)
     profiles = load_profiles(args.profiles)
@@ -118,10 +156,13 @@ def main() -> None:
     candidate_vocabulary = build_held_out_candidate_vocabulary(benchmark)
     base_backend = LocalModelCandidateBackend(
         model_config,
+        allow_download=args.download,
         candidate_vocabulary=candidate_vocabulary,
     )
     generator = CandidateGenerator(base_backend)
 
+    checkpoint: LanguageCheckpointStore | None = None
+    started = time.monotonic()
     with SQLiteKnowledgeStore(":memory:") as store:
         for profile in profiles:
             for record in profile.knowledge:
@@ -148,6 +189,7 @@ def main() -> None:
                 adapter_backend = LocalModelCandidateBackend(
                     model_config,
                     adapter_path=adapter.directory,
+                    allow_download=args.download,
                 )
                 return PersonalizedLanguagePipeline(
                     generator,
@@ -164,20 +206,89 @@ def main() -> None:
                     cleanup=clear_mlx_cache,
                 )
             )
-        result = HeldOutLanguageBenchmarkRunner(spec).run(
-            benchmark=benchmark,
-            runtimes=tuple(runtimes),
-            candidate_vocabulary_sha256=candidate_vocabulary.digest(),
-        )
 
-    revision, source_tree_sha256 = git_state()
-    manifest = write_held_out_language_artifacts(
-        result,
-        args.output,
-        git_sha=revision,
-        source_tree_sha256=source_tree_sha256,
-        overwrite=args.overwrite,
-    )
+        adapters = {runtime.profile.profile_id: runtime.adapter.manifest for runtime in runtimes}
+        corpus_digests = {
+            runtime.profile.profile_id: runtime.corpus_manifest.digest() for runtime in runtimes
+        }
+        vocabulary_sha256 = candidate_vocabulary.digest()
+        trial_count = expected_language_trial_count(spec, benchmark)
+        identity = LanguageCheckpointIdentity(
+            schema_version="1.0",
+            run_id=held_out_language_run_id(
+                spec=spec,
+                benchmark_source_sha256=benchmark.source_sha256,
+                backend=model_config.metadata,
+                adapters=adapters,
+                candidate_vocabulary_sha256=vocabulary_sha256,
+            ),
+            git_sha=revision,
+            source_tree_sha256=source_tree_sha256,
+            config_sha256=spec.digest(),
+            model_config_sha256=hashlib.sha256(args.model_config.read_bytes()).hexdigest(),
+            benchmark_source_sha256=benchmark.source_sha256,
+            candidate_vocabulary_sha256=vocabulary_sha256,
+            backend=model_config.metadata,
+            adapter_manifest_sha256={
+                profile_id: manifest.digest() for profile_id, manifest in adapters.items()
+            },
+            corpus_manifest_sha256=corpus_digests,
+            expected_trial_count=trial_count,
+        )
+        if args.checkpoint_dir is not None:
+            checkpoint = LanguageCheckpointStore.open(
+                args.checkpoint_dir,
+                identity,
+                resume=args.resume,
+                flush_every=args.checkpoint_every,
+            )
+            print(
+                f"Checkpoint: {len(checkpoint.trials)}/{trial_count} completed "
+                f"at {args.checkpoint_dir}"
+            )
+
+        initial_completed = len(checkpoint.trials) if checkpoint is not None else 0
+
+        def record_progress(record: Any, completed: int, total: int) -> None:
+            if checkpoint is not None:
+                checkpoint.append(record)
+                current = len(checkpoint.trials)
+            else:
+                current = completed
+            if current % args.progress_every != 0 and current != total:
+                return
+            newly_completed = current - initial_completed
+            elapsed = time.monotonic() - started
+            rate = newly_completed / elapsed if elapsed > 0.0 else 0.0
+            remaining = (total - current) / rate if rate > 0.0 else 0.0
+            print(
+                f"Progress: {current}/{total} ({100.0 * current / total:.1f}%), "
+                f"elapsed={elapsed / 60.0:.1f}m, eta={remaining / 60.0:.1f}m",
+                flush=True,
+            )
+
+        try:
+            result = HeldOutLanguageBenchmarkRunner(spec).run(
+                benchmark=benchmark,
+                runtimes=tuple(runtimes),
+                generated_at=(checkpoint.metadata.started_at if checkpoint is not None else None),
+                candidate_vocabulary_sha256=vocabulary_sha256,
+                resumed_trials=tuple(checkpoint.trials) if checkpoint is not None else (),
+                progress_callback=record_progress,
+            )
+            manifest = write_held_out_language_artifacts(
+                result,
+                args.output,
+                git_sha=revision,
+                source_tree_sha256=source_tree_sha256,
+                overwrite=args.overwrite,
+            )
+            if checkpoint is not None:
+                checkpoint.mark_complete(result_manifest_sha256=manifest.digest())
+        finally:
+            if checkpoint is not None:
+                checkpoint.close()
+
     print(f"Run: {result.run_id}")
     print(f"Trials: {len(result.trials)}")
     print(f"Claim eligible: {result.claim_eligible}")

@@ -224,6 +224,8 @@ class FakeModel:
 
 
 class FakeMx:
+    gpu = "gpu"
+    selected_device = ""
     array = staticmethod(np.asarray)
     take_along_axis = staticmethod(np.take_along_axis)
     mean = staticmethod(np.mean)
@@ -240,9 +242,23 @@ class FakeMx:
     def eval(value: Any) -> None:
         del value
 
+    @classmethod
+    def set_default_device(cls, device: str) -> None:
+        cls.selected_device = device
 
+    @classmethod
+    def default_device(cls) -> Any:
+        return SimpleNamespace(type=cls.selected_device)
+
+
+@pytest.mark.parametrize(
+    ("system", "machine"),
+    (("Darwin", "arm64"), ("Linux", "x86_64")),
+)
 def test_mlx_runtime_lazy_generation_and_token_likelihood_scoring(
     monkeypatch: pytest.MonkeyPatch,
+    system: str,
+    machine: str,
 ) -> None:
     config = load_local_model_config(MODEL_CONFIG)
     loaded: dict[str, Any] = {}
@@ -265,8 +281,8 @@ def test_mlx_runtime_lazy_generation_and_token_likelihood_scoring(
         "neuroselect.language.local_models.importlib.import_module",
         lambda name: fake_modules.get(name) or original_import(name),
     )
-    monkeypatch.setattr("neuroselect.language.local_models.platform.system", lambda: "Darwin")
-    monkeypatch.setattr("neuroselect.language.local_models.platform.machine", lambda: "arm64")
+    monkeypatch.setattr("neuroselect.language.local_models.platform.system", lambda: system)
+    monkeypatch.setattr("neuroselect.language.local_models.platform.machine", lambda: machine)
 
     runtime = MlxLanguageRuntime(config, adapter_path="/adapter")
     generated = runtime.generate(({"role": "user", "content": "test"},), max_tokens=10)
@@ -284,8 +300,9 @@ def test_mlx_runtime_lazy_generation_and_token_likelihood_scoring(
 def test_mlx_runtime_rejects_unsupported_platform(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("neuroselect.language.local_models.platform.system", lambda: "Linux")
-    with pytest.raises(LocalModelDependencyError, match="Apple silicon"):
+    monkeypatch.setattr("neuroselect.language.local_models.platform.system", lambda: "Windows")
+    monkeypatch.setattr("neuroselect.language.local_models.platform.machine", lambda: "AMD64")
+    with pytest.raises(LocalModelDependencyError, match="Apple silicon or Linux"):
         MlxLanguageRuntime(load_local_model_config(MODEL_CONFIG)).generate(
             ({"role": "user", "content": "test"},), max_tokens=1
         )

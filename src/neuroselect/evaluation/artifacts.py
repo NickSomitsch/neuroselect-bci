@@ -52,6 +52,18 @@ def capture_runtime_environment() -> tuple[dict[str, str], dict[str, str]]:
         "machine": platform.machine(),
         "processor": platform.processor() or "unknown",
     }
+    if torch.cuda.is_available():
+        capability = torch.cuda.get_device_capability(0)
+        properties = torch.cuda.get_device_properties(0)
+        device.update(
+            {
+                "accelerator": "cuda",
+                "gpu_name": torch.cuda.get_device_name(0),
+                "cuda_compute_capability": f"{capability[0]}.{capability[1]}",
+                "cuda_runtime": str(torch.version.cuda),
+                "gpu_memory_bytes": str(properties.total_memory),
+            }
+        )
     return package_versions, device
 
 

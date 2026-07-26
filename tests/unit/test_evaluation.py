@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 import torch
@@ -76,6 +77,28 @@ def test_runtime_environment_preserves_torch_build_version(
     package_versions, _ = capture_runtime_environment()
 
     assert package_versions["torch"] == "2.13.0+cu130"
+
+
+def test_runtime_environment_captures_cuda_device(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch.cuda, "get_device_capability", lambda _index: (8, 9))
+    monkeypatch.setattr(
+        torch.cuda,
+        "get_device_properties",
+        lambda _index: SimpleNamespace(total_memory=24 * 1024**3),
+    )
+    monkeypatch.setattr(torch.cuda, "get_device_name", lambda _index: "Test GPU")
+    monkeypatch.setattr(torch.version, "cuda", "13.0")
+
+    _, device = capture_runtime_environment()
+
+    assert device["accelerator"] == "cuda"
+    assert device["gpu_name"] == "Test GPU"
+    assert device["cuda_compute_capability"] == "8.9"
+    assert device["cuda_runtime"] == "13.0"
+    assert device["gpu_memory_bytes"] == str(24 * 1024**3)
 
 
 def test_condition_catalog_keeps_artifact_gated_lora_and_complete_runs_unavailable() -> None:
