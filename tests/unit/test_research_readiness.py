@@ -35,6 +35,18 @@ from neuroselect.provenance import ArtifactRef, RunKind, RunManifest, RunStatus
 ROOT = Path(__file__).parents[2]
 
 
+def test_counterfactual_research_target_uses_research_decoder() -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    target = makefile.split("counterfactual-research-input:", maxsplit=1)[1].split(
+        "\ncounterfactual-research-evaluation:", maxsplit=1
+    )[0]
+
+    assert "--decoder-artifacts artifacts/models/p300-xdawn-lda-research-v1" in target
+    assert (
+        "--language-artifacts artifacts/evaluation/held-out-language-personalization-research-v1"
+    ) in target
+
+
 def test_tracked_research_expansion_protocols_are_unlimited_and_strict() -> None:
     expansion = load_research_expansion_spec(
         ROOT / "configs/experiments/research_evidence_expansion.yaml"

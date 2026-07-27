@@ -107,6 +107,7 @@ counterfactual-evaluation:
 counterfactual-research-input: research-readiness
 	uv run python scripts/prepare_counterfactual_input.py \
 		--language-artifacts artifacts/evaluation/held-out-language-personalization-research-v1 \
+		--decoder-artifacts artifacts/models/p300-xdawn-lda-research-v1 \
 		--preparation-config configs/experiments/counterfactual_input_research.yaml \
 		--fusion-config configs/experiments/counterfactual_fusion_research.yaml \
 		--output artifacts/evaluation/counterfactual-input-research-v1 \
