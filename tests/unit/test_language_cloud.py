@@ -235,3 +235,23 @@ def test_cloud_bundle_detects_member_tampering(tmp_path: Path) -> None:
             archive.addfile(info, io.BytesIO(value))
     with pytest.raises(ValueError, match="checksum mismatch"):
         verify_language_cloud_bundle(tampered)
+
+
+def test_colab_notebook_uses_local_ssd_and_durable_checkpoint_mirror() -> None:
+    notebook_path = ROOT / "notebooks/neuroselect_step11_colab.ipynb"
+    notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+    code = "\n".join(
+        "".join(cell["source"]) for cell in notebook["cells"] if cell["cell_type"] == "code"
+    )
+
+    for index, cell in enumerate(notebook["cells"]):
+        if cell["cell_type"] == "code":
+            compile("".join(cell["source"]), f"colab-cell-{index}", "exec")
+
+    assert "neuroselect-step11-source.bundle" in code
+    assert 'LOCAL_HF_HOME = Path("/content/' in code
+    assert '"--checkpoint-mirror-dir"' in code
+    assert "str(DRIVE_CHECKPOINT_DIR)" in code
+    assert '"--checkpoint-every"' in code
+    assert '"25"' in code
+    assert '"MPLBACKEND": "Agg"' in code

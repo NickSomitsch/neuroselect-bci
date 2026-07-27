@@ -6,8 +6,8 @@ model_revision: 52a5ab34fa604bc8af6d3ce0cac0cab10b7eb495
 license: Apache-2.0
 download_enabled: false
 deterministic: false
-generator_revision: mlx-structured-candidates-v1
-prompt_revision: structured-next-span-qwen3-v3
+generator_revision: mlx-structured-candidates-v2
+prompt_revision: structured-next-span-qwen3-v4
 generation:
   enable_thinking: false
   temperature: 0.0
@@ -17,3 +17,5 @@ generation:
 scoring:
   method: mean-token-log-likelihood
   softmax_temperature: 1.0
+  maximum_batch_size: 16
+  reuse_prompt_cache: true

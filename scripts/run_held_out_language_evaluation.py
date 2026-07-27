@@ -19,6 +19,7 @@ from neuroselect.evaluation import (
     expected_language_trial_count,
     held_out_language_run_id,
     load_held_out_language_spec,
+    select_held_out_messages,
     write_held_out_language_artifacts,
 )
 from neuroselect.language import (
@@ -75,7 +76,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--checkpoint-dir",
         type=Path,
-        help="Durable checkpoint directory (use Google Drive on Colab).",
+        help="Fast active checkpoint directory.",
+    )
+    parser.add_argument(
+        "--checkpoint-mirror-dir",
+        type=Path,
+        help="Durable mirror synchronized only at checkpoint flushes (use Google Drive on Colab).",
     )
     parser.add_argument(
         "--resume",
@@ -141,10 +147,55 @@ def clear_mlx_cache() -> None:
         pass
 
 
+def workload_counts(spec: Any, benchmark: Any) -> tuple[int, int, int]:
+    """Count trials and reusable context-only inference requests."""
+
+    generic_contexts: set[str] = set()
+    profile_contexts: set[tuple[str, str]] = set()
+    total = 0
+    for profile_id in sorted(benchmark.profile_ids):
+        messages = tuple(
+            message
+            for message in benchmark.messages[spec.split]
+            if message.profile_id == profile_id
+        )
+        for message in select_held_out_messages(spec, messages):
+            confirmed: list[str] = []
+            for intended_text in message.target_spans:
+                context = " ".join(confirmed)
+                generic_contexts.add(context)
+                profile_contexts.add((profile_id, context))
+                total += 1
+                confirmed.append(intended_text)
+    return total, len(generic_contexts), len(profile_contexts)
+
+
+def _runtime_performance(backend: LocalModelCandidateBackend) -> dict[str, float | int]:
+    snapshot = getattr(backend.runtime, "performance_snapshot", None)
+    return snapshot() if snapshot is not None else {}
+
+
+def _sum_performance(
+    values: list[dict[str, float | int]],
+) -> dict[str, float]:
+    keys = {key for value in values for key in value}
+    return {key: sum(float(value.get(key, 0)) for value in values) for key in keys}
+
+
+def _format_duration(seconds: float) -> str:
+    if seconds < 60.0:
+        return f"{seconds:.1f}s"
+    if seconds < 3_600.0:
+        return f"{seconds / 60.0:.1f}m"
+    return f"{seconds / 3_600.0:.1f}h"
+
+
 def main() -> None:
     args = parse_args()
     if args.resume and args.checkpoint_dir is None:
         raise ValueError("--resume requires --checkpoint-dir")
+    if args.checkpoint_mirror_dir is not None and args.checkpoint_dir is None:
+        raise ValueError("--checkpoint-mirror-dir requires --checkpoint-dir")
     if args.checkpoint_every < 1 or args.progress_every < 1:
         raise ValueError("checkpoint and progress intervals must be positive")
 
@@ -159,9 +210,16 @@ def main() -> None:
         allow_download=args.download,
         candidate_vocabulary=candidate_vocabulary,
     )
-    generator = CandidateGenerator(base_backend)
+    generator = CandidateGenerator(base_backend, cache_results=True)
+    selected_trials, generic_requests, profile_requests = workload_counts(spec, benchmark)
+    print(
+        f"Workload: {selected_trials} trials, {generic_requests} unique generic contexts, "
+        f"{profile_requests} unique profile contexts",
+        flush=True,
+    )
 
     checkpoint: LanguageCheckpointStore | None = None
+    adapter_performance: dict[str, dict[str, float | int]] = {}
     started = time.monotonic()
     with SQLiteKnowledgeStore(":memory:") as store:
         for profile in profiles:
@@ -181,21 +239,34 @@ def main() -> None:
                 expected_model_revision=model_config.model_revision,
             )
             corpus = load_personalization_corpus_manifest(args.corpus_root / profile.profile_id)
+            backend_holder: dict[str, LocalModelCandidateBackend] = {}
 
             def pipeline_factory(
                 *,
                 adapter: Any = adapter,
+                backend_holder: dict[str, LocalModelCandidateBackend] = backend_holder,
             ) -> PersonalizedLanguagePipeline:
                 adapter_backend = LocalModelCandidateBackend(
                     model_config,
                     adapter_path=adapter.directory,
                     allow_download=args.download,
                 )
+                backend_holder["backend"] = adapter_backend
                 return PersonalizedLanguagePipeline(
                     generator,
                     MlxAdapterPersonalizer(adapter_backend, adapter),
                     retriever,
                 )
+
+            def cleanup(
+                *,
+                profile_id: str = profile.profile_id,
+                backend_holder: dict[str, LocalModelCandidateBackend] = backend_holder,
+            ) -> None:
+                backend = backend_holder.pop("backend", None)
+                if backend is not None:
+                    adapter_performance[profile_id] = _runtime_performance(backend)
+                clear_mlx_cache()
 
             runtimes.append(
                 LanguageProfileRuntime(
@@ -203,7 +274,7 @@ def main() -> None:
                     adapter=adapter,
                     corpus_manifest=corpus,
                     pipeline_factory=pipeline_factory,
-                    cleanup=clear_mlx_cache,
+                    cleanup=cleanup,
                 )
             )
 
@@ -241,6 +312,7 @@ def main() -> None:
                 identity,
                 resume=args.resume,
                 flush_every=args.checkpoint_every,
+                mirror_directory=args.checkpoint_mirror_dir,
             )
             print(
                 f"Checkpoint: {len(checkpoint.trials)}/{trial_count} completed "
@@ -248,8 +320,15 @@ def main() -> None:
             )
 
         initial_completed = len(checkpoint.trials) if checkpoint is not None else 0
+        last_progress_at = time.monotonic()
+        rolling_intervals: list[float] = []
 
         def record_progress(record: Any, completed: int, total: int) -> None:
+            nonlocal last_progress_at
+            now = time.monotonic()
+            rolling_intervals.append(now - last_progress_at)
+            del rolling_intervals[:-100]
+            last_progress_at = now
             if checkpoint is not None:
                 checkpoint.append(record)
                 current = len(checkpoint.trials)
@@ -260,10 +339,17 @@ def main() -> None:
             newly_completed = current - initial_completed
             elapsed = time.monotonic() - started
             rate = newly_completed / elapsed if elapsed > 0.0 else 0.0
-            remaining = (total - current) / rate if rate > 0.0 else 0.0
+            rolling_rate = (
+                len(rolling_intervals) / sum(rolling_intervals)
+                if sum(rolling_intervals) > 0.0
+                else 0.0
+            )
+            effective_rate = rolling_rate or rate
+            remaining = (total - current) / effective_rate if effective_rate > 0.0 else 0.0
             print(
                 f"Progress: {current}/{total} ({100.0 * current / total:.1f}%), "
-                f"elapsed={elapsed / 60.0:.1f}m, eta={remaining / 60.0:.1f}m",
+                f"elapsed={_format_duration(elapsed)}, eta={_format_duration(remaining)}, "
+                f"rolling={rolling_rate:.2f} trials/s",
                 flush=True,
             )
 
@@ -302,6 +388,62 @@ def main() -> None:
         )
     print(f"Manifest: {args.output / 'manifest.json'}")
     print(f"Manifest SHA-256: {manifest.digest()}")
+    elapsed = time.monotonic() - started
+    base_performance = _runtime_performance(base_backend)
+    adapter_total = _sum_performance(list(adapter_performance.values()))
+    load_seconds = float(base_performance.get("model_load_seconds", 0)) + float(
+        adapter_total.get("model_load_seconds", 0)
+    )
+    scoring_seconds = float(base_performance.get("scoring_seconds", 0)) + float(
+        adapter_total.get("scoring_seconds", 0)
+    )
+    print(
+        f"Performance: elapsed={_format_duration(elapsed)}, "
+        f"generic_cache={generator.cache_hits} hits/{generator.cache_misses} misses, "
+        f"generic_batches={int(base_performance.get('scoring_batches', 0))}, "
+        f"adapter_batches={int(adapter_total.get('scoring_batches', 0))}, "
+        f"loads={_format_duration(load_seconds)}, "
+        f"generation={_format_duration(float(base_performance.get('generation_seconds', 0)))}, "
+        f"scoring={_format_duration(scoring_seconds)}",
+        flush=True,
+    )
+    if spec.maximum_messages_per_profile is not None:
+        research_spec = load_held_out_language_spec(
+            "configs/experiments/held_out_language_personalization_research.yaml"
+        )
+        research_trials, research_generic, research_profile = workload_counts(
+            research_spec, benchmark
+        )
+        base_generation_calls = float(base_performance.get("generation_calls", 0))
+        base_scoring_calls = float(base_performance.get("scoring_calls", 0))
+        adapter_calls = float(adapter_total.get("scoring_calls", 0))
+        model_seconds = sum(
+            float(base_performance.get(key, 0)) + float(adapter_total.get(key, 0))
+            for key in ("model_load_seconds", "generation_seconds", "scoring_seconds")
+        )
+        projection = float(base_performance.get("model_load_seconds", 0)) + float(
+            adapter_total.get("model_load_seconds", 0)
+        )
+        if base_generation_calls > 0:
+            projection += (
+                float(base_performance.get("generation_seconds", 0)) / base_generation_calls
+            )
+        if base_scoring_calls > 0:
+            projection += research_generic * (
+                float(base_performance.get("scoring_seconds", 0)) / base_scoring_calls
+            )
+        if adapter_calls > 0:
+            projection += research_profile * (
+                float(adapter_total.get("scoring_seconds", 0)) / adapter_calls
+            )
+        projection += research_trials * max(0.0, elapsed - model_seconds) / len(result.trials)
+        print(
+            f"Projected full optimized Step 11: about {_format_duration(projection)} "
+            f"for {research_trials} trials ({research_generic} generic and "
+            f"{research_profile} profile-context inferences). Treat this pilot projection "
+            "as approximate.",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

@@ -162,17 +162,23 @@ make language-cloud-verify \
 
 The approximately 113 MB ignored archive contains only the four final research adapters and
 checksum-verified personalization corpora. It excludes intermediate adapter checkpoints and the
-Qwen base model. Upload the archive to
-`MyDrive/neuroselect-step11/step11-language-inputs-v1.tar.gz`, push the implementation commit,
-paste that exact commit SHA into the notebook, and run its cells in order. The notebook:
+Qwen base model. After committing the implementation, create the private source bundle with
+`make language-cloud-source-bundle LANGUAGE_CLOUD_SOURCE_BUNDLE_ARGS="--overwrite"`. Upload it as
+`MyDrive/neuroselect-step11/neuroselect-step11-source.bundle` and upload the adapter archive as
+`MyDrive/neuroselect-step11/step11-language-inputs-v1.tar.gz`. Paste the exact bundled commit SHA
+into the notebook and run its cells in order. The notebook:
 
 - rejects GPUs below CUDA compute capability 7.5 before installation;
 - installs the locked Python 3.12 and `local-language-cuda` environment;
 - safely verifies and extracts the adapter/corpus archive;
-- downloads the exact pinned Qwen revision once into a persistent Drive cache;
+- downloads the exact pinned Qwen revision once into a persistent Drive cache and copies it to
+  Colab's local SSD for inference;
 - runs a short development-limit pilot with all four research adapters;
-- checkpoints every five new research trials to Drive and resumes only when every input identity
-  matches; and
+- enumerates only the applicable train/validation candidate vocabulary, batches Qwen likelihood
+  scoring behind one shared prompt cache, and reuses identical context-only requests without
+  inserting intended targets;
+- writes active checkpoints to local SSD and atomically mirrors every 25 new research trials to
+  Drive, resuming only when every input identity matches; and
 - verifies all 3,990 ordered trials, clean Git provenance, checksums, and claim eligibility.
 
 The canonical result and an export archive remain under `MyDrive/neuroselect-step11/`. On a Linux

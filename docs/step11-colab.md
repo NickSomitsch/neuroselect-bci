@@ -6,7 +6,23 @@ inference and evaluation only.
 
 ## One-time local handoff
 
-Create and verify the portable inputs:
+Commit the implementation first. The notebook deliberately refuses a moving branch or dirty
+working tree. Then create the exact private-repository source bundle:
+
+```bash
+git add .
+git commit -m "optimize Step 11 T4 inference"
+git push
+make language-cloud-source-bundle \
+  LANGUAGE_CLOUD_SOURCE_BUNDLE_ARGS="--overwrite"
+git rev-parse HEAD
+```
+
+The final command prints the 40-character SHA to paste into the notebook. The source archive is
+`artifacts/cloud/neuroselect-step11-source.bundle`.
+
+Create and verify the portable adapter/corpus inputs if the existing verified archive is not
+already available:
 
 ```bash
 make language-cloud-bundle LANGUAGE_CLOUD_BUNDLE_ARGS="--overwrite"
@@ -29,15 +45,15 @@ Upload the archive to:
 
 ```text
 MyDrive/neuroselect-step11/step11-language-inputs-v1.tar.gz
+MyDrive/neuroselect-step11/neuroselect-step11-source.bundle
 ```
 
-Commit and push the implementation, then copy the exact 40-character commit SHA. The notebook uses
-a detached checkout because a moving branch cannot safely resume a research run.
+Neither archive belongs in Git.
 
 ## Colab execution
 
-Open `notebooks/neuroselect_step11_colab.ipynb` in Colab and choose a GPU runtime. Run the cells in
-order.
+Upload `notebooks/neuroselect_step11_colab.ipynb` in Colab, choose `Runtime > Change runtime type >
+T4 GPU`, and run the cells in order.
 
 The first cell rejects a missing GPU or CUDA compute capability below 7.5. A T4, L4, A100, or
 newer compatible NVIDIA GPU is suitable. A P100 is not suitable for the MLX CUDA runtime.
@@ -51,30 +67,45 @@ GIT_REVISION = "<the exact pushed 40-character commit SHA>"
 The notebook then:
 
 1. mounts Google Drive;
-2. clones and detaches at that exact clean revision;
+2. clones the uploaded source bundle and detaches at that exact clean revision;
 3. installs Python 3.12 plus the locked `local-language-cuda` optional dependencies;
 4. runs a real MLX GPU calculation as a preflight;
 5. verifies and safely extracts the 113 MB input archive;
 6. downloads the configured `Qwen/Qwen3-4B-MLX-4bit` revision into
-   `MyDrive/neuroselect-step11/huggingface-cache`;
-7. runs a short four-profile pilot;
-8. runs the full research protocol with durable checkpoints; and
+   `MyDrive/neuroselect-step11/huggingface-cache`, then copies it to the Colab local SSD;
+7. runs a short four-profile optimized pilot and prints a full-run projection;
+8. runs the full research protocol on local SSD with atomic Drive checkpoint mirrors; and
 9. verifies and exports the canonical final result.
 
 The pilot uses the development one-message-per-profile limit and the real research adapters. It
-tests compatibility and provides an early speed estimate, but it is not research evidence.
+tests compatibility and provides an early speed estimate, but it is not research evidence. Do not
+use the old pilot timing: the optimized runner batches continuation scoring with one shared prompt
+cache, reuses identical context-only inference, enumerates the applicable train/validation-only
+allow-list instead of asking Qwen to echo it as JSON, and reports a new projection. Qwen still
+provides the measured likelihood ranking for every visible language candidate.
+
+The T4 execution path preserves the research inputs and does not inspect or insert intended target
+spans during candidate generation. For repeated identical confirmed contexts it reuses the same
+generic or profile-conditioned evidence. The locked full workload contains 3,990 trials but only
+1,908 unique generic contexts and about 1,981 unique profile/context combinations.
 
 ## Disconnects and resume
 
-The full-run cell uses:
+The full-run cell uses fast ephemeral storage for active writes:
 
 ```text
-MyDrive/neuroselect-step11/checkpoint-v1/
+/content/neuroselect-step11-checkpoint/
 ```
 
-Every five new trials are flushed and synced. If Colab disconnects, reconnect to a compatible GPU
-and rerun the notebook cells. The same full-run cell skips completed trials. It refuses to resume
-if any of these changed:
+Every 25 new trials are fsynced and atomically copied to:
+
+```text
+MyDrive/neuroselect-step11/checkpoint-optimized-v1/
+```
+
+If Colab disconnects, reconnect to a compatible GPU and rerun every notebook cell in order. The
+full-run cell restores the Drive mirror to local SSD and skips completed trials. It refuses to
+resume if any of these changed:
 
 - Git revision or dirty source digest;
 - research protocol or model configuration;
@@ -82,7 +113,7 @@ if any of these changed:
 - adapter or corpus manifests; or
 - expected trial count.
 
-At worst, an abrupt disconnect loses the fewer than five most recent unflushed trials. Never edit
+At worst, an abrupt disconnect loses the fewer than 25 most recent unflushed trials. Never edit
 `checkpoint.json` or `trials.jsonl`. If intentionally starting with different inputs, choose a new
 checkpoint directory instead of reusing the old one.
 

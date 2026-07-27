@@ -63,8 +63,10 @@ class ContextBackend:
 
     def __init__(self, *, fail_after_alpha: bool = False) -> None:
         self.fail_after_alpha = fail_after_alpha
+        self.calls = 0
 
     def generate(self, request: CandidateGenerationRequest) -> tuple[CandidateProposal, ...]:
+        self.calls += 1
         if request.confirmed_text == "alpha":
             if self.fail_after_alpha:
                 raise CandidateGenerationError("controlled generation failure")
@@ -76,6 +78,7 @@ class ContextBackend:
 
 class StaticAdapterPersonalizer:
     def __init__(self, manifest: PersonalizationAdapterManifest) -> None:
+        self.calls = 0
         self.provenance = PersonalizationProvenance(
             profile_id=manifest.profile_id,
             evidence_kind="held_out_adapter",
@@ -95,6 +98,7 @@ class StaticAdapterPersonalizer:
         candidates: tuple[Candidate, ...],
     ) -> dict[str, float]:
         del request
+        self.calls += 1
         weights = {"alpha": 0.8, "gamma": 0.15, "delta": 0.05}
         raw = {
             candidate.candidate_id: weights.get(candidate.text, 1.0)
@@ -324,6 +328,7 @@ def test_runner_records_natural_target_absence_and_ranking() -> None:
                 at_time=NOW,
             )
         runtime = replace(build_runtime(store), cleanup=cleanup)
+        pipeline = runtime.pipeline_factory()
         result = HeldOutLanguageBenchmarkRunner(spec()).run(
             benchmark=benchmark(),
             runtimes=(runtime,),
@@ -331,6 +336,10 @@ def test_runner_records_natural_target_absence_and_ranking() -> None:
         )
 
     assert cleaned is True
+    assert isinstance(pipeline.generator.backend, ContextBackend)
+    assert isinstance(pipeline.personalizer, StaticAdapterPersonalizer)
+    assert pipeline.generator.backend.calls == 2
+    assert pipeline.personalizer.calls == 2
     assert len(result.trials) == 3
     assert [trial.target_available for trial in result.trials] == [True, False, True]
     assert result.trials[0].generic_rank == 2
@@ -387,6 +396,9 @@ def test_runner_resumes_only_exact_protocol_trials() -> None:
             runtimes=(runtime,),
             generated_at=NOW,
         )
+        pipeline = runtime.pipeline_factory()
+        assert isinstance(pipeline.generator.backend, ContextBackend)
+        assert pipeline.generator.backend.calls == 2
         callbacks: list[tuple[str, int, int]] = []
         resumed = runner.run(
             benchmark=benchmark(),
@@ -400,6 +412,7 @@ def test_runner_resumes_only_exact_protocol_trials() -> None:
 
         assert resumed == original
         assert callbacks == [(original.trials[2].trial_id, 3, 3)]
+        assert pipeline.generator.backend.calls == 2
 
         mismatched = original.trials[0].model_copy(update={"confirmed_context": "wrong"})
         with pytest.raises(ValueError, match="does not match"):

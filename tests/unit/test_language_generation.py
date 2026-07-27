@@ -42,9 +42,11 @@ class StubBackend:
 
     def __init__(self, proposals: tuple[CandidateProposal, ...]) -> None:
         self.proposals = proposals
+        self.calls = 0
 
     def generate(self, request: CandidateGenerationRequest) -> tuple[CandidateProposal, ...]:
         del request
+        self.calls += 1
         return self.proposals
 
 
@@ -155,6 +157,24 @@ def test_zero_backend_support_becomes_uniform_without_claiming_calibration() -> 
     result = CandidateGenerator(backend).generate(CandidateGenerationRequest(candidate_count=6))
 
     assert tuple(result.generic_language_support.values()) == pytest.approx((1 / 3, 1 / 3, 1 / 3))
+
+
+def test_candidate_generator_optionally_reuses_identical_context_results() -> None:
+    backend = StubBackend((proposal("alpha", 0.5), proposal("beta", 0.3), proposal("gamma", 0.2)))
+    generator = CandidateGenerator(backend, cache_results=True)
+    request = CandidateGenerationRequest(confirmed_text="same", candidate_count=6)
+
+    first = generator.generate(request)
+    second = generator.generate(request)
+    different = generator.generate(
+        CandidateGenerationRequest(confirmed_text="different", candidate_count=6)
+    )
+
+    assert first is second
+    assert different != first
+    assert backend.calls == 2
+    assert generator.cache_hits == 1
+    assert generator.cache_misses == 2
 
 
 def test_trusted_policy_tags_sensitive_candidates_after_generation() -> None:

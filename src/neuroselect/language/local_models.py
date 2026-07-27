@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import math
 import platform
+import time
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
@@ -50,6 +51,8 @@ class CandidateScoringConfig(BaseModel):
 
     method: Literal["mean-token-log-likelihood"] = "mean-token-log-likelihood"
     softmax_temperature: float = Field(default=1.0, gt=0.0, le=10.0)
+    maximum_batch_size: int = Field(default=16, ge=1, le=64)
+    reuse_prompt_cache: Literal[True] = True
 
 
 class LocalModelConfig(BaseModel):
@@ -235,10 +238,22 @@ class MlxLanguageRuntime:
         self._mx: Any = None
         self._generate: Any = None
         self._make_sampler: Any = None
+        self._make_prompt_cache: Any = None
+        self._performance: dict[str, float | int] = {
+            "model_loads": 0,
+            "model_load_seconds": 0.0,
+            "generation_calls": 0,
+            "generation_seconds": 0.0,
+            "scoring_calls": 0,
+            "scoring_batches": 0,
+            "scored_continuations": 0,
+            "scoring_seconds": 0.0,
+        }
 
     def _load(self) -> None:
         if self._model is not None:
             return
+        started = time.perf_counter()
         runtime_platform = (platform.system(), platform.machine())
         if runtime_platform not in SUPPORTED_MLX_PLATFORMS:
             raise LocalModelDependencyError(
@@ -249,6 +264,7 @@ class MlxLanguageRuntime:
             mlx_lm = importlib.import_module("mlx_lm")
             self._mx = importlib.import_module("mlx.core")
             sample_utils = importlib.import_module("mlx_lm.sample_utils")
+            cache_utils = importlib.import_module("mlx_lm.models.cache")
         except ImportError as error:
             raise LocalModelDependencyError(
                 "MLX-LM is optional; install `local-language` on Apple silicon or "
@@ -277,6 +293,9 @@ class MlxLanguageRuntime:
         )
         self._generate = mlx_lm.generate
         self._make_sampler = sample_utils.make_sampler
+        self._make_prompt_cache = cache_utils.make_prompt_cache
+        self._performance["model_loads"] += 1
+        self._performance["model_load_seconds"] += time.perf_counter() - started
 
     def _render(self, messages: tuple[ChatMessage, ...]) -> str:
         self._load()
@@ -292,6 +311,7 @@ class MlxLanguageRuntime:
 
     def generate(self, messages: tuple[ChatMessage, ...], *, max_tokens: int) -> str:
         prompt = self._render(messages)
+        started = time.perf_counter()
         sampler = self._make_sampler(temp=self.config.generation.temperature)
         generated = self._generate(
             self._model,
@@ -303,6 +323,8 @@ class MlxLanguageRuntime:
         )
         if not isinstance(generated, str):
             raise CandidateGenerationError("MLX-LM returned a non-text generation")
+        self._performance["generation_calls"] += 1
+        self._performance["generation_seconds"] += time.perf_counter() - started
         return generated
 
     def score_continuations(
@@ -317,28 +339,66 @@ class MlxLanguageRuntime:
         if not prompt_ids:
             raise CandidateGenerationError("tokenizer produced an empty scoring prompt")
 
-        scores: list[float] = []
+        started = time.perf_counter()
+        encoded_continuations: list[tuple[int, ...]] = []
         for continuation in continuations:
             continuation_ids = tuple(
                 self._tokenizer.encode(f" {continuation}", add_special_tokens=False)
             )
             if not continuation_ids:
                 raise CandidateGenerationError("tokenizer produced an empty continuation")
-            combined = (*prompt_ids, *continuation_ids)
-            inputs = self._mx.array(combined[:-1])[None, :]
-            outputs = self._model(inputs)
+            encoded_continuations.append(continuation_ids)
+
+        prompt_cache = self._make_prompt_cache(self._model)
+        if len(prompt_ids) > 1:
+            self._model(self._mx.array(prompt_ids[:-1])[None, :], cache=prompt_cache)
+            self._mx.eval([cache.state for cache in prompt_cache])
+
+        pad_token_id = getattr(self._tokenizer, "pad_token_id", None)
+        if pad_token_id is None:
+            pad_token_id = getattr(self._tokenizer, "eos_token_id", None)
+        if pad_token_id is None:
+            pad_token_id = 0
+
+        scores: list[float] = []
+        batch_size = self.config.scoring.maximum_batch_size
+        for offset in range(0, len(encoded_continuations), batch_size):
+            batch = encoded_continuations[offset : offset + batch_size]
+            model_inputs = [(prompt_ids[-1], *continuation_ids[:-1]) for continuation_ids in batch]
+            maximum_length = max(len(row) for row in model_inputs)
+            padded_inputs = [
+                (*row, *(pad_token_id for _ in range(maximum_length - len(row))))
+                for row in model_inputs
+            ]
+            batch_cache = [type(cache).merge([cache] * len(batch)) for cache in prompt_cache]
+            outputs = self._model(self._mx.array(padded_inputs), cache=batch_cache)
             logits = outputs.logits if hasattr(outputs, "logits") else outputs
-            start = len(prompt_ids) - 1
-            stop = start + len(continuation_ids)
-            completion_logits = logits[0, start:stop, :]
-            log_probabilities = completion_logits - self._mx.logsumexp(
-                completion_logits, axis=-1, keepdims=True
-            )
-            targets = self._mx.array(continuation_ids)[:, None]
-            selected = self._mx.take_along_axis(log_probabilities, targets, axis=-1).squeeze(-1)
-            self._mx.eval(selected)
-            scores.append(float(self._mx.mean(selected).item()))
+            batch_means: list[Any] = []
+            for index, continuation_ids in enumerate(batch):
+                completion_logits = logits[index, : len(continuation_ids), :]
+                log_probabilities = completion_logits - self._mx.logsumexp(
+                    completion_logits, axis=-1, keepdims=True
+                )
+                targets = self._mx.array(continuation_ids)[:, None]
+                selected = self._mx.take_along_axis(log_probabilities, targets, axis=-1).squeeze(-1)
+                batch_means.append(self._mx.mean(selected))
+            means = self._mx.stack(batch_means)
+            self._mx.eval(means)
+            scores.extend(float(value) for value in means.tolist())
+            self._performance["scoring_batches"] += 1
+            clear_cache = getattr(self._mx, "clear_cache", None)
+            if clear_cache is not None:
+                clear_cache()
+
+        self._performance["scoring_calls"] += 1
+        self._performance["scored_continuations"] += len(continuations)
+        self._performance["scoring_seconds"] += time.perf_counter() - started
         return tuple(scores)
+
+    def performance_snapshot(self) -> dict[str, float | int]:
+        """Return cumulative local inference timings without exposing model state."""
+
+        return dict(self._performance)
 
 
 class LocalModelCandidateBackend:
@@ -374,49 +434,35 @@ class LocalModelCandidateBackend:
             raise CandidateGenerationError(
                 "candidate vocabulary does not cover the visible language quota"
             )
-        proposal_count = (
-            len(allowed_phrases)
-            if allowed_phrases
-            else max(
+        if allowed_phrases:
+            proposals = tuple(
+                CandidateProposal(text=phrase, support=0.0) for phrase in allowed_phrases
+            )
+            self.last_output_repaired = False
+        else:
+            proposal_count = max(
                 self.config.generation.minimum_proposals,
                 language_quota * self.config.generation.proposal_multiplier,
             )
-        )
-        messages = _generation_messages(
-            request,
-            proposal_count=proposal_count,
-            allowed_phrases=allowed_phrases,
-        )
-        raw = self.runtime.generate(messages, max_tokens=self.config.generation.maximum_new_tokens)
-        from neuroselect.language.generation import (
-            _parse_structured_proposals_with_diagnostics,
-        )
+            messages = _generation_messages(
+                request,
+                proposal_count=proposal_count,
+            )
+            raw = self.runtime.generate(
+                messages, max_tokens=self.config.generation.maximum_new_tokens
+            )
+            from neuroselect.language.generation import (
+                _parse_structured_proposals_with_diagnostics,
+            )
 
-        proposals, self.last_output_repaired = _parse_structured_proposals_with_diagnostics(raw)
-        if allowed_phrases:
-            canonical = {self._vocabulary_key(phrase): phrase for phrase in allowed_phrases}
-            filtered: dict[str, CandidateProposal] = {}
-            for proposal in proposals:
-                key = self._vocabulary_key(proposal.text)
-                if key in canonical:
-                    filtered.setdefault(
-                        key,
-                        proposal.model_copy(update={"text": canonical[key]}),
-                    )
-            proposals = tuple(filtered.values())
+            proposals, self.last_output_repaired = _parse_structured_proposals_with_diagnostics(raw)
             if not proposals:
-                raise CandidateGenerationError(
-                    "backend returned no candidates from the non-test vocabulary"
-                )
+                raise CandidateGenerationError("backend returned no candidate proposals")
         support = self.score_texts(request, tuple(proposal.text for proposal in proposals))
         return tuple(
             proposal.model_copy(update={"support": score})
             for proposal, score in zip(proposals, support, strict=True)
         )
-
-    @staticmethod
-    def _vocabulary_key(value: str) -> str:
-        return " ".join(value.casefold().split()).rstrip(".,!?;:")
 
     def score_texts(
         self,

@@ -106,12 +106,14 @@ class LanguageCheckpointStore:
         trials: tuple[LanguageBenchmarkTrial, ...],
         *,
         flush_every: int,
+        mirror_directory: Path | None = None,
     ) -> None:
         self.directory = directory
         self.metadata = metadata
         self.trials = list(trials)
         self._trial_ids = {trial.trial_id for trial in trials}
         self._flush_every = flush_every
+        self._mirror_directory = mirror_directory
         self._pending = 0
         self._stream: IO[str] = (directory / "trials.jsonl").open(
             "a", encoding="utf-8", buffering=1
@@ -126,12 +128,24 @@ class LanguageCheckpointStore:
         resume: bool = False,
         flush_every: int = 5,
         started_at: datetime | None = None,
+        mirror_directory: str | Path | None = None,
     ) -> Self:
         """Create a checkpoint or resume only when its complete identity agrees."""
 
         if flush_every < 1:
             raise ValueError("checkpoint flush frequency must be positive")
         destination = Path(directory)
+        mirror = Path(mirror_directory) if mirror_directory is not None else None
+        if mirror is not None:
+            if mirror.resolve(strict=False) == destination.resolve(strict=False):
+                raise ValueError("checkpoint mirror must differ from the active directory")
+            mirror_metadata = mirror / "checkpoint.json"
+            if not (destination / "checkpoint.json").exists() and mirror_metadata.exists():
+                cls._copy_checkpoint_files(mirror, destination)
+            elif mirror.exists() and any(mirror.iterdir()) and not mirror_metadata.exists():
+                raise ValueError(
+                    f"checkpoint mirror {mirror} is non-empty but has no checkpoint header"
+                )
         metadata_path = destination / "checkpoint.json"
         trials_path = destination / "trials.jsonl"
         if metadata_path.exists():
@@ -166,7 +180,27 @@ class LanguageCheckpointStore:
         trials = cls._read_trials(trials_path)
         if len(trials) > identity.expected_trial_count:
             raise ValueError("checkpoint contains more trials than the selected protocol")
-        return cls(destination, metadata, trials, flush_every=flush_every)
+        store = cls(
+            destination,
+            metadata,
+            trials,
+            flush_every=flush_every,
+            mirror_directory=mirror,
+        )
+        store.flush()
+        return store
+
+    @staticmethod
+    def _copy_checkpoint_files(source: Path, destination: Path) -> None:
+        destination.mkdir(parents=True, exist_ok=True)
+        for name in ("checkpoint.json", "trials.jsonl", "complete.json"):
+            source_path = source / name
+            if source_path.is_file():
+                _atomic_write(destination / name, source_path.read_bytes())
+
+    def _sync_mirror(self) -> None:
+        if self._mirror_directory is not None:
+            self._copy_checkpoint_files(self.directory, self._mirror_directory)
 
     @staticmethod
     def _read_trials(path: Path) -> tuple[LanguageBenchmarkTrial, ...]:
@@ -212,6 +246,7 @@ class LanguageCheckpointStore:
         self._stream.flush()
         os.fsync(self._stream.fileno())
         self._pending = 0
+        self._sync_mirror()
 
     def mark_complete(self, *, result_manifest_sha256: str) -> None:
         """Persist the link to the canonical final artifact after all trials exist."""
@@ -230,6 +265,7 @@ class LanguageCheckpointStore:
             self.directory / "complete.json",
             (_canonical_json(completion.model_dump(mode="json")) + "\n").encode(),
         )
+        self._sync_mirror()
 
     def close(self) -> None:
         if not self._stream.closed:

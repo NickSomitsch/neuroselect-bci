@@ -70,6 +70,7 @@ class FakeRuntime:
         self.scores = scores
         self.generated_messages: tuple[dict[str, str], ...] = ()
         self.scored_messages: tuple[dict[str, str], ...] = ()
+        self.scored_continuations: tuple[str, ...] = ()
 
     def generate(self, messages: tuple[dict[str, str], ...], *, max_tokens: int) -> str:
         assert max_tokens == 512
@@ -82,6 +83,7 @@ class FakeRuntime:
         continuations: tuple[str, ...],
     ) -> tuple[float, ...]:
         self.scored_messages = messages
+        self.scored_continuations = continuations
         assert continuations
         return self.scores[: len(continuations)]
 
@@ -151,16 +153,6 @@ def test_local_backend_marks_outer_json_repair_in_generation_diagnostics() -> No
 
 def test_local_backend_constrains_and_canonicalizes_non_test_vocabulary() -> None:
     runtime = FakeRuntime(
-        response=json.dumps(
-            {
-                "candidates": [
-                    {"text": "alpha", "support": 0.0},
-                    {"text": "not allowed", "support": 0.0},
-                    {"text": "beta", "support": 0.0},
-                    {"text": "gamma", "support": 0.0},
-                ]
-            }
-        ),
         scores=(-1.0, -2.0, -3.0),
     )
     backend = LocalModelCandidateBackend(
@@ -181,11 +173,8 @@ def test_local_backend_constrains_and_canonicalizes_non_test_vocabulary() -> Non
         "Beta.",
         "Gamma.",
     }
-    assert (
-        "Allowed phrases learned only from non-test messages"
-        in (runtime.generated_messages[1]["content"])
-    )
-    assert "not allowed" not in {candidate.text for candidate in result.candidate_set.candidates}
+    assert runtime.generated_messages == ()
+    assert runtime.scored_continuations == ("Alpha.", "Beta.", "Gamma.")
 
 
 def test_local_backend_fails_on_bad_runtime_scores_and_output() -> None:
@@ -219,8 +208,27 @@ class FakeTokenizer:
 
 
 class FakeModel:
-    def __call__(self, inputs: np.ndarray[Any, Any]) -> np.ndarray[Any, Any]:
-        return np.zeros((1, inputs.shape[1], 8), dtype=float)
+    def __init__(self) -> None:
+        self.input_shapes: list[tuple[int, ...]] = []
+
+    def __call__(
+        self,
+        inputs: np.ndarray[Any, Any],
+        *,
+        cache: Any = None,
+    ) -> np.ndarray[Any, Any]:
+        del cache
+        self.input_shapes.append(inputs.shape)
+        return np.zeros((inputs.shape[0], inputs.shape[1], 8), dtype=float)
+
+
+class FakeCache:
+    state = ()
+
+    @classmethod
+    def merge(cls, caches: list[FakeCache]) -> FakeCache:
+        assert caches
+        return cls()
 
 
 class FakeMx:
@@ -229,6 +237,7 @@ class FakeMx:
     array = staticmethod(np.asarray)
     take_along_axis = staticmethod(np.take_along_axis)
     mean = staticmethod(np.mean)
+    stack = staticmethod(np.stack)
 
     @staticmethod
     def logsumexp(
@@ -241,6 +250,10 @@ class FakeMx:
     @staticmethod
     def eval(value: Any) -> None:
         del value
+
+    @staticmethod
+    def clear_cache() -> None:
+        return None
 
     @classmethod
     def set_default_device(cls, device: str) -> None:
@@ -262,10 +275,11 @@ def test_mlx_runtime_lazy_generation_and_token_likelihood_scoring(
 ) -> None:
     config = load_local_model_config(MODEL_CONFIG)
     loaded: dict[str, Any] = {}
+    fake_model = FakeModel()
 
     def fake_load(path: str, *, adapter_path: str | None, revision: str | None) -> Any:
         loaded.update(path=path, adapter_path=adapter_path, revision=revision)
-        return FakeModel(), FakeTokenizer()
+        return fake_model, FakeTokenizer()
 
     fake_modules = {
         "mlx_lm": SimpleNamespace(
@@ -274,6 +288,7 @@ def test_mlx_runtime_lazy_generation_and_token_likelihood_scoring(
         ),
         "mlx.core": FakeMx,
         "mlx_lm.sample_utils": SimpleNamespace(make_sampler=lambda **kwargs: ("sampler", kwargs)),
+        "mlx_lm.models.cache": SimpleNamespace(make_prompt_cache=lambda _model: [FakeCache()]),
         "huggingface_hub": SimpleNamespace(snapshot_download=lambda **_kwargs: "/cached/model"),
     }
     original_import = importlib.import_module
@@ -290,6 +305,8 @@ def test_mlx_runtime_lazy_generation_and_token_likelihood_scoring(
 
     assert generated == '{"candidates":[]}'
     assert scores == pytest.approx((-math.log(8), -math.log(8)))
+    assert fake_model.input_shapes == [(1, 1), (2, 2)]
+    assert runtime.performance_snapshot()["scoring_batches"] == 1
     assert loaded == {
         "path": "/cached/model",
         "adapter_path": "/adapter",

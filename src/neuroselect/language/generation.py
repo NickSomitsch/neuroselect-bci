@@ -136,11 +136,26 @@ class CandidateGenerator:
         self,
         backend: CandidateBackend,
         risk_tagger: CandidateRiskTagger | None = None,
+        *,
+        cache_results: bool = False,
     ) -> None:
         self.backend = backend
         self.risk_tagger = risk_tagger or CandidateRiskTagger()
+        self.cache_results = cache_results
+        self._result_cache: dict[tuple[str, int, int], CandidateGenerationResult] = {}
+        self.cache_hits = 0
+        self.cache_misses = 0
 
     def generate(self, request: CandidateGenerationRequest) -> CandidateGenerationResult:
+        cache_key = (
+            request.confirmed_text,
+            request.candidate_count,
+            request.maximum_phrase_tokens,
+        )
+        if self.cache_results and cache_key in self._result_cache:
+            self.cache_hits += 1
+            return self._result_cache[cache_key]
+        self.cache_misses += 1
         proposals = self.backend.generate(request)
         language_quota = request.candidate_count - len(CONTROL_CANDIDATES)
         rejected: Counter[ProposalRejectionReason] = Counter()
@@ -238,7 +253,7 @@ class CandidateGenerator:
             generator_revision=self.backend.metadata.generator_revision,
             prompt_revision=self.backend.metadata.prompt_revision,
         )
-        return CandidateGenerationResult(
+        result = CandidateGenerationResult(
             candidate_set=candidate_set,
             generic_language_support=generic_language_support,
             control_actions={
@@ -254,6 +269,9 @@ class CandidateGenerator:
                 backend_output_repaired=bool(getattr(self.backend, "last_output_repaired", False)),
             ),
         )
+        if self.cache_results:
+            self._result_cache[cache_key] = result
+        return result
 
     @staticmethod
     def _rejection_reason(

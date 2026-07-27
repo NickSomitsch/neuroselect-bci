@@ -485,6 +485,7 @@ class HeldOutLanguageBenchmarkRunner:
         resumed_by_id = {trial.trial_id: trial for trial in resumed_trials}
         if len(resumed_by_id) != len(resumed_trials):
             raise ValueError("resumed language trials contain duplicate trial IDs")
+        evidence_by_context: dict[tuple[str, str], LanguageBenchmarkTrial] = {}
         expected_trial_count = expected_language_trial_count(self.spec, benchmark)
 
         for profile_id in sorted(runtime_by_profile):
@@ -549,8 +550,11 @@ class HeldOutLanguageBenchmarkRunner:
                                 context=context,
                                 pipeline=pipeline,
                                 adapter=manifest,
+                                cached_trial=evidence_by_context.get((profile_id, context)),
                             )
                         records.append(record)
+                        if not record.candidate_generation_failed:
+                            evidence_by_context.setdefault((profile_id, context), record)
                         if resumed is None and progress_callback is not None:
                             progress_callback(record, len(records), expected_trial_count)
                         confirmed.append(intended_text)
@@ -657,36 +661,57 @@ class HeldOutLanguageBenchmarkRunner:
         context: str,
         pipeline: PersonalizedLanguagePipeline,
         adapter: PersonalizationAdapterManifest,
+        cached_trial: LanguageBenchmarkTrial | None = None,
     ) -> LanguageBenchmarkTrial:
         trial_id = f"language-{message.message_id}-{span_index:02d}"
-        request = CandidateGenerationRequest(
-            confirmed_text=context,
-            candidate_count=self.spec.candidate_count,
-            maximum_phrase_tokens=self.spec.maximum_phrase_tokens,
-        )
-        try:
-            result = pipeline.generate(
-                request,
-                profile_id=message.profile_id,
-                at_time=self.spec.retrieval_at,
+        if cached_trial is None:
+            request = CandidateGenerationRequest(
+                confirmed_text=context,
+                candidate_count=self.spec.candidate_count,
+                maximum_phrase_tokens=self.spec.maximum_phrase_tokens,
             )
-        except CandidateGenerationError as error:
-            return LanguageBenchmarkTrial(
-                trial_id=trial_id,
-                profile_id=message.profile_id,
-                message_id=message.message_id,
-                span_index=span_index,
-                message_span_count=len(message.target_spans),
-                confirmed_context=context,
-                intended_text=intended_text,
-                candidate_generation_failed=True,
-                backend_output_repaired=False,
-                failure_reason=str(error),
-                adapter_id=adapter.adapter_id,
-                adapter_sha256=adapter.adapter_sha256,
-            )
+            try:
+                result = pipeline.generate(
+                    request,
+                    profile_id=message.profile_id,
+                    at_time=self.spec.retrieval_at,
+                )
+            except CandidateGenerationError as error:
+                return LanguageBenchmarkTrial(
+                    trial_id=trial_id,
+                    profile_id=message.profile_id,
+                    message_id=message.message_id,
+                    span_index=span_index,
+                    message_span_count=len(message.target_spans),
+                    confirmed_context=context,
+                    intended_text=intended_text,
+                    candidate_generation_failed=True,
+                    backend_output_repaired=False,
+                    failure_reason=str(error),
+                    adapter_id=adapter.adapter_id,
+                    adapter_sha256=adapter.adapter_sha256,
+                )
+            candidate_set = result.generation.candidate_set
+            generic_language_support = result.generation.generic_language_support
+            personalization_support = result.personalization_support
+            personalization_lift = result.personalization_lift
+            retrieval_evidence = result.retrieval_evidence
+            backend_output_repaired = result.generation.diagnostics.backend_output_repaired
+        else:
+            if (
+                cached_trial.profile_id != message.profile_id
+                or cached_trial.confirmed_context != context
+                or cached_trial.candidate_set is None
+            ):
+                raise ValueError("cached language evidence does not match its context")
+            candidate_set = cached_trial.candidate_set
+            generic_language_support = cached_trial.generic_language_support
+            personalization_support = cached_trial.personalization_support
+            personalization_lift = cached_trial.personalization_lift
+            retrieval_evidence = cached_trial.retrieval_evidence
+            backend_output_repaired = cached_trial.backend_output_repaired
 
-        candidates = result.generation.candidate_set.candidates
+        candidates = candidate_set.candidates
         language_candidates = tuple(
             candidate for candidate in candidates if candidate.kind is not CandidateKind.CONTROL
         )
@@ -701,9 +726,10 @@ class HeldOutLanguageBenchmarkRunner:
         intended_id = intended.candidate_id if intended is not None else None
         candidate_order = tuple(candidate.candidate_id for candidate in language_candidates)
         other_id = next(
-            candidate_id
-            for candidate_id, action in result.generation.control_actions.items()
-            if action.value == "other"
+            candidate.candidate_id
+            for candidate in candidates
+            if candidate.kind is CandidateKind.CONTROL
+            and _normalized_text(candidate.text).rstrip(".") == "other"
         )
         return LanguageBenchmarkTrial(
             trial_id=trial_id,
@@ -713,17 +739,17 @@ class HeldOutLanguageBenchmarkRunner:
             message_span_count=len(message.target_spans),
             confirmed_context=context,
             intended_text=intended_text,
-            backend_output_repaired=result.generation.diagnostics.backend_output_repaired,
-            candidate_set=result.generation.candidate_set,
+            backend_output_repaired=backend_output_repaired,
+            candidate_set=candidate_set,
             intended_candidate_id=intended_id,
             other_candidate_id=other_id,
-            generic_language_support=result.generation.generic_language_support,
-            personalization_support=result.personalization_support,
-            personalization_lift=result.personalization_lift,
-            retrieval_evidence=result.retrieval_evidence,
+            generic_language_support=generic_language_support,
+            personalization_support=personalization_support,
+            personalization_lift=personalization_lift,
+            retrieval_evidence=retrieval_evidence,
             generic_rank=(
                 _rank(
-                    result.generation.generic_language_support,
+                    generic_language_support,
                     target_id=intended_id,
                     candidate_order=candidate_order,
                 )
@@ -732,7 +758,7 @@ class HeldOutLanguageBenchmarkRunner:
             ),
             personalized_rank=(
                 _rank(
-                    result.personalization_support,
+                    personalization_support,
                     target_id=intended_id,
                     candidate_order=candidate_order,
                 )

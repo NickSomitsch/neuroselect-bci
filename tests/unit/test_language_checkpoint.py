@@ -141,3 +141,34 @@ def test_checkpoint_rejects_invalid_duplicate_and_excess_trials(tmp_path: Path) 
         store.append(failed_trial(1))
         with pytest.raises(ValueError, match="expected number"):
             store.append(failed_trial(0).model_copy(update={"trial_id": "language-extra"}))
+
+
+def test_checkpoint_uses_fast_active_storage_with_atomic_durable_mirror(
+    tmp_path: Path,
+) -> None:
+    active = tmp_path / "active"
+    mirror = tmp_path / "mirror"
+    with LanguageCheckpointStore.open(
+        active,
+        identity(),
+        flush_every=2,
+        mirror_directory=mirror,
+    ) as store:
+        store.append(failed_trial(0))
+        assert (mirror / "trials.jsonl").read_text(encoding="utf-8") == ""
+        store.append(failed_trial(1))
+
+    mirrored_trials = (mirror / "trials.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(mirrored_trials) == 2
+
+    restored_active = tmp_path / "restored-active"
+    with LanguageCheckpointStore.open(
+        restored_active,
+        identity(),
+        resume=True,
+        mirror_directory=mirror,
+    ) as restored:
+        assert restored.trials == [failed_trial(0), failed_trial(1)]
+        restored.mark_complete(result_manifest_sha256="4" * 64)
+
+    assert (mirror / "complete.json").is_file()
