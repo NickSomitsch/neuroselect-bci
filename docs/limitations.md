@@ -51,3 +51,8 @@ The frozen language evaluation makes an intended span available in only about 29
 never makes every span of a held-out message available. Conditional ranking improvements therefore
 do not establish end-to-end message completion. Profile-level effects are heterogeneous, including
 a negative top-1 effect for the concise synthetic profile.
+
+The exploratory candidate-generation v2 comparison raises exact-span availability to 52.5% and
+complete-message availability to 2.1%, but it is profile-conditioned, grammar-routed, and
+test-exposed. It diagnoses a candidate-set construction alternative on the same synthetic
+benchmark and cannot replace the frozen primary result.

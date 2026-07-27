@@ -47,8 +47,16 @@ The primary paper will report weak or null results as prominently as favorable o
 - no meaningful complete-system advantage over BCI-only replay in the frozen counterfactual
   sample.
 
-Any candidate-generation v2 experiment is an exploratory supplement and is reported whether it
-improves or worsens the result.
+Candidate-generation v2 is a target-blind, profile-conditioned retrieval experiment fitted only
+on train and validation messages. Its design is explicitly marked test-exposed because the
+benchmark structure and primary outcome were already known. It remains an exploratory supplement
+and is reported whether it improves or worsens the result.
+
+The locked v2 run compares all 3,990 primary spans at the same nine-language-candidate budget. It
+increased exact-span availability from 28.7% to 52.5% (paired difference 23.8 percentage points;
+descriptive 95% bootstrap interval 21.9 to 25.7) and complete-message availability from 0% to 2.1%
+(interval for the difference 1.3 to 3.0). These results diagnose candidate-set construction on the
+fixed synthetic benchmark; they are not live-use evidence and do not replace the primary result.
 
 ## Submission blockers
 

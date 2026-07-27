@@ -1,6 +1,23 @@
 """Reproducible controlled experiments over the simulated vertical slice."""
 
 from neuroselect.evaluation.artifacts import capture_runtime_environment, write_experiment_artifacts
+from neuroselect.evaluation.candidate_generation_v2 import (
+    CandidateBank,
+    CandidateGenerationV2Interval,
+    CandidateGenerationV2Metrics,
+    CandidateGenerationV2Result,
+    CandidateGenerationV2Spec,
+    CandidateGenerationV2Trial,
+    CandidateRole,
+    TargetBlindContextualGeneratorV2,
+    build_candidate_bank_v2,
+    evaluate_candidate_generation_v2,
+    load_candidate_generation_v2_spec,
+)
+from neuroselect.evaluation.candidate_generation_v2_artifacts import (
+    read_candidate_generation_v2_artifacts,
+    write_candidate_generation_v2_artifacts,
+)
 from neuroselect.evaluation.conditions import condition_by_id, condition_catalog
 from neuroselect.evaluation.counterfactual import (
     CounterfactualConfigurationError,
@@ -70,6 +87,13 @@ from neuroselect.evaluation.runner import (
 
 __all__ = [
     "CANDIDATE_VOCABULARY_REVISION",
+    "CandidateBank",
+    "CandidateGenerationV2Interval",
+    "CandidateGenerationV2Metrics",
+    "CandidateGenerationV2Result",
+    "CandidateGenerationV2Spec",
+    "CandidateGenerationV2Trial",
+    "CandidateRole",
     "ConditionAvailability",
     "ConditionDefinition",
     "ConditionFamily",
@@ -100,24 +124,30 @@ __all__ = [
     "RetrievalMode",
     "SimulatedExperimentRunner",
     "SimulatedExperimentSpec",
+    "TargetBlindContextualGeneratorV2",
     "TrialRecord",
+    "build_candidate_bank_v2",
     "build_held_out_candidate_vocabulary",
     "calculate_metrics",
     "capture_runtime_environment",
     "condition_by_id",
     "condition_catalog",
+    "evaluate_candidate_generation_v2",
     "expected_calibration_error",
     "expected_language_trial_count",
     "flash_trials_from_decoder_evaluation",
     "held_out_language_run_id",
+    "load_candidate_generation_v2_spec",
     "load_counterfactual_input",
     "load_counterfactual_spec",
     "load_experiment_spec",
     "load_held_out_language_spec",
+    "read_candidate_generation_v2_artifacts",
     "read_counterfactual_artifacts",
     "read_held_out_language_artifacts",
     "select_held_out_messages",
     "shuffle_retrieval_across_candidates",
+    "write_candidate_generation_v2_artifacts",
     "write_counterfactual_artifacts",
     "write_experiment_artifacts",
     "write_held_out_language_artifacts",

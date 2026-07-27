@@ -1,0 +1,20 @@
+schema_version: "1.0"
+experiment_id: neuroselect-candidate-generation-v2-exploratory-v1
+protocol_revision: candidate-generation-v2-exploratory-v1
+generated_at: 2026-07-27T23:30:00+02:00
+publication_protocol: configs/publication/offline_methods_v1.yaml
+expected_protocol_sha256: 3beb95cc8dcf3a602e1671c8e7fe26adc615308c6523232a6d5a19728a900b5a
+primary_language_artifacts: artifacts/evaluation/held-out-language-personalization-research-v1
+expected_primary_language_manifest_sha256: 0ae04ed11f8ff842503a9f3ec241841b4ff20a0baf46445648d3c6e7c4069b65
+benchmark_spec: synthetic_data/benchmark.yaml
+profiles_directory: synthetic_data/profiles
+expected_benchmark_source_sha256: 9b7d61f2b2024edd40008fa6b6dd69cd97e06096d579f9ce61d23193cd86748f
+fitting_source_splits: [train, validation]
+language_candidate_count: 9
+maximum_phrase_tokens: 4
+request_object_time_quota: 7
+request_object_location_quota: 1
+request_object_ending_quota: 1
+bootstrap_resamples: 10000
+bootstrap_seed: 20260727
+design_status: exploratory_test_exposed

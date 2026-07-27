@@ -20,6 +20,7 @@ class RunKind(StrEnum):
     COMPONENT_EVALUATION = "component_evaluation"
     RESEARCH_REPORT = "research_report"
     PUBLICATION_ANALYSIS = "publication_analysis"
+    EXPLORATORY_EVALUATION = "exploratory_evaluation"
 
 
 class RunStatus(StrEnum):
