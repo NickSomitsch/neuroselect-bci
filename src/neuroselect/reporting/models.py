@@ -21,6 +21,7 @@ class EvidenceKind(StrEnum):
     """Mutually exclusive evidence tiers that must never be pooled."""
 
     CONTROLLED_SIMULATION = "controlled_simulation"
+    LANGUAGE_COMPONENT = "language_component"
     EEG_ORIGINAL_TASK = "eeg_original_task"
     COUNTERFACTUAL_REPLAY = "counterfactual_replay"
 

@@ -97,27 +97,41 @@ clean source manifest. The joblib checkpoint is not loaded by the audit.
 
 ## Research report
 
-After producing local artifacts, run:
+Step 13 consumes the frozen outputs from the controlled simulation, Step 11 full held-out language
+evaluation, Step 9 research xDAWN evaluation, and Step 12 research counterfactual evaluation. It
+does not retrain a model, download data, or rerun a source experiment. Run:
 
 ```bash
 make research-report
 ```
 
-The tracked report recipe requires the controlled simulation and treats xDAWN, EEGNet, and
-counterfactual artifacts as optional until locally available. It verifies every output checksum,
+The tracked report recipe requires all four research artifacts. It verifies every output checksum,
 does not execute checkpoint files, reconstructs simulation result digests, and emits canonical
-JSON, readable Markdown, and a report manifest. `release_ready` is false if a required source is
-missing or if the tracked clean-source policy is violated.
+JSON, readable Markdown, and a report manifest. `release_ready` is false if any required source is
+missing or if the tracked clean-source policy is violated. The report target deliberately does not
+depend on `simulated-evaluation`, because rebuilding a frozen source while preparing the report
+would change its identity and could make its provenance dirty.
 
 Simulation intervals resample synthetic profiles and then paired trials. Counterfactual intervals
-resample subjects and then trials. Evidence tiers are rendered in separate tables and must remain
-separate in publications.
+resample subjects and then trials. The language table reports unconditional candidate recall
+beside recall conditional on target availability; it does not invent an interval absent from the
+source result. Evidence tiers are rendered in separate tables and must remain separate in
+publications.
+
+The report generator records the current source-tree state in its own manifest. Therefore, after
+committing a Step 13 implementation, regenerate and strictly validate the final artifact with:
+
+```bash
+make research-report
+make release-check RELEASE_CHECK_ARGS="--report artifacts/reports/neuroselect-research-release-v1"
+```
 
 ## Evidence hierarchy
 
 1. Controlled simulation: engineering behavior only.
-2. Original-task EEG: source P300 target/non-target decoding only.
-3. Counterfactual replay: candidate-system behavior over remapped recorded evidence.
-4. Future live or participant study: unavailable and requiring a separate protocol.
+2. Held-out language component: synthetic teacher-forced candidate generation and ranking only.
+3. Original-task EEG: source P300 target/non-target decoding only.
+4. Counterfactual replay: candidate-system behavior over remapped recorded evidence.
+5. Future live or participant study: unavailable and requiring a separate protocol.
 
 Absence of a higher tier cannot be filled by relabeling a lower tier.

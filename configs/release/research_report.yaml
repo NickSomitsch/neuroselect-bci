@@ -1,7 +1,7 @@
 schema_version: "1.0"
 report_id: neuroselect-research-release-v1
 title: NeuroSelect research release evidence report
-generated_at: 2026-07-20T12:00:00Z
+generated_at: 2026-07-27T12:00:00Z
 bootstrap_seed: 20260720
 bootstrap_resamples: 2000
 confidence_level: 0.95
@@ -13,18 +13,18 @@ sources:
     expected_run_kind: simulation
     required: true
     reference_condition: current_safe_fusion
+  - source_id: held-out-language
+    label: Held-out language personalization evaluation
+    path: artifacts/evaluation/held-out-language-personalization-research-v1
+    expected_run_kind: component_evaluation
+    required: true
   - source_id: xdawn-original-task
-    label: xDAWN original-task Study P evaluation
-    path: artifacts/models/p300-xdawn-lda-v1
+    label: Research xDAWN original-task Study P evaluation
+    path: artifacts/models/p300-xdawn-lda-research-v1
     expected_run_kind: eeg_original_task
-    required: false
-  - source_id: eegnet-original-task
-    label: EEGNet original-task and chronological evaluation
-    path: artifacts/models/p300-eegnet-v1
-    expected_run_kind: eeg_original_task
-    required: false
-  - source_id: counterfactual-fusion
-    label: Offline counterfactual fusion evaluation
-    path: artifacts/evaluation/counterfactual-fusion-v2
+    required: true
+  - source_id: counterfactual-research
+    label: Research offline counterfactual fusion evaluation
+    path: artifacts/evaluation/counterfactual-fusion-research-v1
     expected_run_kind: counterfactual_replay
-    required: false
+    required: true

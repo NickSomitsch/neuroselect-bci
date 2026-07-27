@@ -5,6 +5,7 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -21,10 +22,16 @@ from neuroselect.decoding import (
 from neuroselect.eeg import P300Label, PreprocessingConfig
 from neuroselect.evaluation import (
     EvaluationCondition,
+    HeldOutLanguageResult,
+    HeldOutLanguageSpec,
+    LanguageBenchmarkMetrics,
+    LanguageBenchmarkTrial,
     SimulatedExperimentRunner,
     load_experiment_spec,
     write_experiment_artifacts,
+    write_held_out_language_artifacts,
 )
+from neuroselect.language import BackendMetadata, PersonalizationAdapterManifest
 from neuroselect.provenance import ArtifactRef, RunKind, RunManifest, RunStatus
 from neuroselect.reporting import (
     EvidenceKind,
@@ -228,6 +235,103 @@ def write_original_task_source(directory: Path) -> None:
         metadata={"working_tree_dirty": False},
     )
     (directory / "manifest.json").write_text(manifest.canonical_json() + "\n", encoding="utf-8")
+
+
+def write_language_source(directory: Path) -> None:
+    profile_id = "synthetic-concise"
+    held_out_spec = HeldOutLanguageSpec(
+        schema_version="1.0",
+        experiment_id="reporting-language-fixture",
+        protocol_revision="held-out-language-personalization-v1",
+        seed=20260724,
+        candidate_count=12,
+        maximum_phrase_tokens=4,
+        retrieval_at=GENERATED_AT,
+        evidence_tier="research",
+        maximum_messages_per_profile=None,
+    )
+    adapter = PersonalizationAdapterManifest(
+        schema_version="1.0",
+        adapter_id="lora-synthetic-concise-fixture",
+        profile_id=profile_id,
+        base_model_id="Qwen/Qwen3-4B-MLX-4bit",
+        base_model_revision="1" * 40,
+        adapter_file="adapters.safetensors",
+        adapter_sha256="2" * 64,
+        source_corpus_manifest_sha256="3" * 64,
+        training_config_sha256="4" * 64,
+        trainer_revision="neuroselect-mlx-lora-v1",
+        mlx_lm_version="test",
+        trained_at=GENERATED_AT,
+        validation_evaluated=True,
+        test_evaluated=True,
+    )
+    trial = LanguageBenchmarkTrial(
+        trial_id="language-reporting-fixture-00",
+        profile_id=profile_id,
+        message_id="message-reporting-fixture",
+        span_index=0,
+        message_span_count=1,
+        confirmed_context="",
+        intended_text="Please help",
+        candidate_generation_failed=True,
+        failure_reason="controlled reporting fixture",
+        adapter_id=adapter.adapter_id,
+        adapter_sha256=adapter.adapter_sha256,
+    )
+    metric_values: dict[str, Any] = {
+        "trial_count": 1,
+        "message_count": 1,
+        "generation_success_rate": 0.0,
+        "repaired_generation_rate": 0.0,
+        "target_availability_rate": 0.0,
+        "message_target_availability_rate": 0.0,
+        "generic_top_1_candidate_recall": 0.0,
+        "generic_top_3_candidate_recall": 0.0,
+        "generic_top_1_recall_given_available": 0.0,
+        "generic_top_3_recall_given_available": 0.0,
+        "generic_mrr_given_available": 0.0,
+        "generic_message_exact_accuracy": 0.0,
+        "personalized_top_1_candidate_recall": 0.0,
+        "personalized_top_3_candidate_recall": 0.0,
+        "personalized_top_1_recall_given_available": 0.0,
+        "personalized_top_3_recall_given_available": 0.0,
+        "personalized_mrr_given_available": 0.0,
+        "personalized_message_exact_accuracy": 0.0,
+        "mean_personalized_rank_improvement_given_available": 0.0,
+    }
+    result = HeldOutLanguageResult(
+        schema_version="1.0",
+        run_id="held-out-language-reporting-fixture",
+        generated_at=GENERATED_AT,
+        config_sha256=held_out_spec.digest(),
+        benchmark_source_sha256="5" * 64,
+        spec=held_out_spec,
+        backend=BackendMetadata(
+            backend_id="fixture-backend",
+            model_id="fixture-model",
+            model_revision="fixture-revision",
+            generator_revision="fixture-generator",
+            prompt_revision="fixture-prompt",
+            deterministic=True,
+        ),
+        adapters={profile_id: adapter},
+        corpus_manifest_sha256={profile_id: adapter.source_corpus_manifest_sha256},
+        trials=(trial,),
+        metrics=(
+            LanguageBenchmarkMetrics(profile_id=None, **metric_values),
+            LanguageBenchmarkMetrics(profile_id=profile_id, **metric_values),
+        ),
+        claim_eligible=True,
+        limitations=("Synthetic reporting fixture.",),
+    )
+    write_held_out_language_artifacts(
+        result,
+        directory,
+        git_sha="c" * 40,
+        package_versions={"python": "3.12", "neuroselect-bci": "test"},
+        device={"system": "test"},
+    )
 
 
 def test_report_builds_verified_separate_table_and_paired_intervals(tmp_path: Path) -> None:
@@ -460,13 +564,74 @@ def test_report_reads_original_task_json_without_executing_checkpoint(tmp_path: 
         ResearchReportBuilder(spec).build()
 
 
+def test_report_reads_held_out_language_as_separate_component_evidence(tmp_path: Path) -> None:
+    source = tmp_path / "held-out-language"
+    write_language_source(source)
+    spec = ResearchReportSpec(
+        report_id="language-report-fixture",
+        title="Language report fixture",
+        generated_at=GENERATED_AT,
+        bootstrap_resamples=100,
+        sources=(
+            ReportSourceSpec(
+                source_id="held-out-language",
+                label="Held-out language",
+                path=source,
+                expected_run_kind=RunKind.COMPONENT_EVALUATION,
+                required=True,
+            ),
+        ),
+    )
+
+    report = ResearchReportBuilder(spec).build()
+
+    assert report.release_ready is True
+    table = report.tables[0]
+    assert table.evidence_kind is EvidenceKind.LANGUAGE_COMPONENT
+    assert table.claim_eligible is True
+    assert [row.row_id for row in table.metric_rows] == ["overall", "synthetic-concise"]
+    assert table.metric_rows[0].values["available_trial_count"] == 0
+    markdown = render_research_report_markdown(report)
+    assert "Offline teacher-forced held-out synthetic next-span" in markdown
+    assert "generic_top_1_candidate_recall" in markdown
+    assert "personalized_top_1_candidate_recall" in markdown
+
+    manifest_path = source / "manifest.json"
+    manifest = RunManifest.model_validate_json(manifest_path.read_text(encoding="utf-8"))
+    invalid_manifest = manifest.model_copy(
+        update={
+            "metadata": {
+                **manifest.metadata,
+                "evidence_kind": "unrelated_component_evaluation",
+            }
+        }
+    )
+    manifest_path.write_text(invalid_manifest.canonical_json() + "\n", encoding="utf-8")
+    with pytest.raises(ResearchReportInputError, match="result metadata"):
+        ResearchReportBuilder(spec).build()
+
+
 def test_tracked_report_config_is_strict_and_release_metadata_is_complete(
     tmp_path: Path,
 ) -> None:
     spec = load_research_report_spec(ROOT / "configs/release/research_report.yaml")
-    assert spec.sources[0].required is True
+    assert tuple(source.source_id for source in spec.sources) == (
+        "controlled-simulation",
+        "held-out-language",
+        "xdawn-original-task",
+        "counterfactual-research",
+    )
+    assert all(source.required for source in spec.sources)
+    assert spec.sources[1].expected_run_kind is RunKind.COMPONENT_EVALUATION
+    assert spec.sources[2].path == Path("artifacts/models/p300-xdawn-lda-research-v1")
+    assert spec.sources[3].path == Path("artifacts/evaluation/counterfactual-fusion-research-v1")
     assert spec.reject_dirty_sources is True
     assert len(spec.digest()) == 64
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    research_target = makefile.split("research-report:", maxsplit=1)[1].split(
+        "\nrelease-check:", maxsplit=1
+    )[0]
+    assert "simulated-evaluation" not in research_target
     development_spec = load_research_report_spec(
         ROOT / "configs/release/development_evidence_report.yaml"
     )

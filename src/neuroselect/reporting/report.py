@@ -25,6 +25,7 @@ from neuroselect.evaluation import (
     TrialRecord,
     capture_runtime_environment,
     read_counterfactual_artifacts,
+    read_held_out_language_artifacts,
 )
 from neuroselect.provenance import ArtifactRef, RunKind, RunManifest, RunStatus
 from neuroselect.reporting.models import (
@@ -365,6 +366,77 @@ def _counterfactual_table(source: _VerifiedSource) -> EvidenceTable:
     )
 
 
+def _language_component_table(source: _VerifiedSource) -> EvidenceTable:
+    output_uris = {item.uri for item in source.manifest.outputs}
+    required_outputs = {
+        "artifact://result.json",
+        "artifact://trials.jsonl",
+        "artifact://metrics.json",
+    }
+    if not required_outputs.issubset(output_uris):
+        raise ResearchReportInputError(
+            "held-out language source is missing required output identities"
+        )
+    try:
+        result, manifest = read_held_out_language_artifacts(source.directory)
+    except (OSError, ValueError) as error:
+        raise ResearchReportInputError(f"invalid held-out language source: {error}") from error
+    expected_metadata = {
+        "evidence_kind": "held_out_language_component_evaluation",
+        "evidence_tier": result.spec.evidence_tier,
+        "claim_eligible": result.claim_eligible,
+        "trial_count": len(result.trials),
+        "profile_ids": sorted(result.adapters),
+    }
+    if (
+        manifest != source.manifest
+        or manifest.run_id != result.run_id
+        or any(manifest.metadata.get(key) != value for key, value in expected_metadata.items())
+    ):
+        raise ResearchReportInputError(
+            "held-out language manifest does not agree with its result metadata"
+        )
+
+    rows: list[ReportMetricRow] = []
+    for metric in result.metrics:
+        profile_id = metric.profile_id
+        applicable_trials = tuple(
+            trial for trial in result.trials if profile_id is None or trial.profile_id == profile_id
+        )
+        values = dict(metric.model_dump(mode="json", exclude={"profile_id"}))
+        values["available_trial_count"] = sum(
+            trial.intended_candidate_id is not None for trial in applicable_trials
+        )
+        rows.append(
+            ReportMetricRow(
+                row_id=profile_id or "overall",
+                label=profile_id or "Overall held-out test",
+                values=values,
+            )
+        )
+    return EvidenceTable(
+        table_id=source.spec.source_id,
+        title=source.spec.label,
+        evidence_kind=EvidenceKind.LANGUAGE_COMPONENT,
+        scope_statement=(
+            "Offline teacher-forced held-out synthetic next-span candidate generation and ranking "
+            "with independently trained per-profile LoRA adapters; these values are not recorded "
+            "EEG, live communication, or participant performance."
+        ),
+        source_run_id=result.run_id,
+        source_manifest_sha256=manifest.digest(),
+        source_git_sha=manifest.git_sha,
+        source_tree_dirty=source.dirty,
+        claim_eligible=result.claim_eligible and not source.dirty,
+        metric_rows=tuple(rows),
+        limitations=(
+            *result.limitations,
+            "No inferential interval is generated for this component table.",
+            "Claim eligibility denotes protocol and provenance compliance, not a positive effect.",
+        ),
+    )
+
+
 def _original_task_table(source: _VerifiedSource) -> EvidenceTable:
     evaluation_path = source.directory / "evaluation.json"
     try:
@@ -497,6 +569,8 @@ class ResearchReportBuilder:
                 tables.append(_counterfactual_table(verified))
             elif verified.manifest.run_kind is RunKind.EEG_ORIGINAL_TASK:
                 tables.append(_original_task_table(verified))
+            elif verified.manifest.run_kind is RunKind.COMPONENT_EVALUATION:
+                tables.append(_language_component_table(verified))
             else:
                 raise ResearchReportInputError(
                     f"unsupported report source run kind: {verified.manifest.run_kind.value}"
@@ -513,8 +587,9 @@ class ResearchReportBuilder:
         )
         run_material = f"{self.spec.digest()}:{source_material}"
         limitations = (
-            "Controlled simulation, original-task EEG, and counterfactual replay are separate "
-            "evidence tiers and must not be pooled into one performance estimate.",
+            "Controlled simulation, held-out language, original-task EEG, and counterfactual "
+            "replay are separate evidence tiers and must not be pooled into one performance "
+            "estimate.",
             "Bootstrap intervals are descriptive and do not establish clinical utility, "
             "non-inferiority, or population-level efficacy.",
             "A release-ready report requires every configured required source and, under the "
@@ -546,10 +621,27 @@ MARKDOWN_METRIC_PRIORITY = (
     "model",
     "trial_count",
     "available_trial_count",
+    "message_count",
     "labeled_epoch_count",
     "unknown_epoch_count",
     "selection_trial_count",
+    "generation_success_rate",
+    "repaired_generation_rate",
     "target_availability_rate",
+    "message_target_availability_rate",
+    "generic_top_1_candidate_recall",
+    "personalized_top_1_candidate_recall",
+    "generic_top_3_candidate_recall",
+    "personalized_top_3_candidate_recall",
+    "generic_top_1_recall_given_available",
+    "personalized_top_1_recall_given_available",
+    "generic_top_3_recall_given_available",
+    "personalized_top_3_recall_given_available",
+    "generic_mrr_given_available",
+    "personalized_mrr_given_available",
+    "mean_personalized_rank_improvement_given_available",
+    "generic_message_exact_accuracy",
+    "personalized_message_exact_accuracy",
     "top_1_candidate_recall",
     "top_3_candidate_recall",
     "top_1_recall_given_available",

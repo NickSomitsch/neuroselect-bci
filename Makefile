@@ -129,7 +129,7 @@ development-report:
 		--output artifacts/reports/neuroselect-development-evidence-v1 \
 		$(DEVELOPMENT_REPORT_ARGS)
 
-research-report: simulated-evaluation
+research-report:
 	uv run python scripts/build_research_report.py --overwrite $(RESEARCH_REPORT_ARGS)
 
 release-check:

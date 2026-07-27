@@ -412,27 +412,37 @@ is correctly reported as dirty and must be regenerated after committing.
 
 ## Research release workflow
 
-Build the evidence-separated report from available verified artifacts with:
+Step 13 builds the evidence-separated report from the four frozen, verified research inputs:
+
+- the controlled simulation engineering matrix;
+- the complete 3,990-span held-out language and personalization result;
+- the full-split research xDAWN Study P original-task result; and
+- the balanced 144-trial research counterfactual replay.
+
+Build the report without rerunning or overwriting any source experiment:
 
 ```bash
 make research-report
 ```
 
-The tracked recipe requires the controlled simulation artifact and lists xDAWN, EEGNet, and
-counterfactual results as optional until they exist locally. The generated JSON and Markdown keep
-controlled simulation, original-task EEG, and counterfactual replay in separate tables. A missing
-required source or dirty source manifest makes the report non-release-ready.
+The tracked recipe requires all four artifacts. The generated JSON and Markdown keep controlled
+simulation, held-out language, original-task EEG, and counterfactual replay in separate tables. A
+missing required source or dirty source manifest makes the report non-release-ready. Protocol
+claim eligibility means that an artifact satisfies its locked coverage and provenance rules; it
+does not mean that the measured effect is large, statistically conclusive, or clinically useful.
 
-Validate public documentation and version metadata and build the Python distributions with:
+After committing the Step 13 implementation so the report itself can have clean source provenance,
+rebuild it and run the strict generated-report gate:
 
 ```bash
-make release-check
+make research-report
+make release-check RELEASE_CHECK_ARGS="--report artifacts/reports/neuroselect-research-release-v1"
 make package
 ```
 
 `make release` runs the full verification, package, controlled evaluation, report, and strict
-report-readiness gate. It is expected to fail on a dirty worktree or while a required artifact is
-missing. See the [reproducibility guide](docs/reproducibility.md) for the evidence hierarchy.
+report-readiness gate. It fails on a dirty worktree or while a required artifact is missing. See
+the [reproducibility guide](docs/reproducibility.md) for the evidence hierarchy.
 
 ## Research boundaries
 
@@ -441,7 +451,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), and [research-release ADR](docs/adr/0015-research-release-and-reporting.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), and [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 
