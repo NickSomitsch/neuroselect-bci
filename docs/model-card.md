@@ -55,31 +55,36 @@ metrics remain separate.
 ## Metrics
 
 Required original-task metrics are event-level AUROC, balanced accuracy, Brier score, negative log
-likelihood, expected calibration error, and selection-trial target-code-set accuracy. Predictive
-and non-predictive conditions and chronological sessions must be reported separately when the full
-dataset evaluation is run.
+likelihood, expected calibration error, exact target-event-set accuracy, target-event recall@K,
+target-event average precision, and top-event hit rate. The legacy
+`selection_code_set_accuracy` field is retained for artifact compatibility, but Study P codes in
+the research evaluation identify occurrence-level events; the metric is not ordinary symbol,
+character, or NeuroSelect candidate accuracy.
 
 ## Limitations and risks
 
-- The baseline has not yet been evaluated across all 19 Study P subjects in this checkout.
+- The research xDAWN evaluation uses the complete fixed 13/3/3 subject split. Only three subjects
+  are held out, so subject-level and bootstrap comparisons remain descriptive.
 - P300 responses and calibration can drift between sessions and subjects.
 - Source condition/order may be confounded with session.
-- Stimulus-code accuracy is not final character or NeuroSelect candidate accuracy.
+- Exact target-event-set accuracy is a stringent all-events metric and is not final character or
+  NeuroSelect candidate accuracy.
 - Joblib checkpoints are executable serialization and must come from a trusted local run.
 - EEGNet training can vary across hardware/runtime versions despite fixed seeds; manifests record
   PyTorch and device versions and comparisons must not mix environments silently.
 - Subject adaptation estimates can be unstable with few selection trials and must never expand to
   full-layer fine-tuning under this protocol.
-- Counterfactual fusion has not been run across the pinned real-data split in this checkout, and a
-  trained held-out language-model LoRA artifact is not bundled for conditions D–F. The optional
-  local trainer and adapter verifier do not by themselves establish a personalization benefit.
+- Counterfactual fusion has been evaluated over a balanced 144-trial subset from the three held-out
+  subjects, but the displayed text was not selected by the source participants and cannot support
+  live-use or clinical claims.
 - The model does not provide automatic selection; downstream use must retain repeat, abstention,
   and explicit-confirmation safeguards.
 
 ## Reproduction
 
-After preparing all required subject artifacts, run `make p300-baseline` for the classical model
-or `make p300-eegnet` for EEGNet plus chronological adaptation. Use
+After preparing all required subject artifacts, run `make p300-research-baseline` for the
+classical research model, `make p300-eegnet-research` for the original-task publication
+comparator, or `make p300-eegnet` for EEGNet plus chronological adaptation. Use
 `make p300-replay P300_REPLAY_ARGS="<epoch-directory> --checkpoint <run-directory>"` for a
 virtual-clock JSONL replay with either checkpoint type. No dataset or model artifact is downloaded
 during CI. Use `make counterfactual-fusion COUNTERFACTUAL_FUSION_ARGS="--input

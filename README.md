@@ -263,6 +263,18 @@ under `artifacts/models/p300-eegnet-v1/`. Feature layers are hash-checked before
 adaptation. Subjects without enough labeled SE001 trials retain the subject-independent decoder
 and are marked for conservative abstention.
 
+For the publication-only original-task comparator, first run the bounded five-epoch pilot and then
+the complete locked training split:
+
+```bash
+make p300-eegnet-pilot P300_EEGNET_PILOT_ARGS="--overwrite"
+make p300-eegnet-research P300_EEGNET_RESEARCH_ARGS="--overwrite"
+```
+
+The research target skips chronological adaptation because the publication comparison is the
+subject-independent original Study P task. It records elapsed time, peak process RSS, calibrated
+event metrics, and explicit occurrence-level target-event ranking metrics.
+
 Replay one prepared recording on a deterministic virtual clock with:
 
 ```bash
@@ -442,7 +454,21 @@ make package
 
 `make release` runs the full verification, package, controlled evaluation, report, and strict
 report-readiness gate. It fails on a dirty worktree or while a required artifact is missing. See
-the [reproducibility guide](docs/reproducibility.md) for the evidence hierarchy.
+the [reproducibility guide](docs/reproducibility.md) for the evidence hierarchy. The locked
+offline-journal framing, immutable evidence inventory, venue order, and external submission gates
+are recorded in the [publication strategy](paper/publication-strategy.md). Validate them without
+rerunning an experiment with:
+
+```bash
+make publication-protocol-check
+make publication-analysis PUBLICATION_ANALYSIS_ARGS="--overwrite"
+```
+
+The publication analysis verifies every frozen source manifest, pins the optional EEGNet
+comparator, uses 10,000 message- or selection-clustered resamples, and writes canonical JSON plus
+CSV estimates and intervals under `artifacts/publication/offline-methods-v1/`. Language resampling
+preserves complete messages within fixed profile strata; counterfactual resampling preserves
+complete messages within held-out EEG subjects.
 
 ## Research boundaries
 
@@ -451,7 +477,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), and [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), and [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

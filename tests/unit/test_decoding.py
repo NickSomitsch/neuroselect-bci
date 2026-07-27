@@ -151,6 +151,11 @@ def test_calibrated_decoder_is_deterministic_and_scores_only_known_labels(
     assert first.metrics.brier_score < 0.1
     assert first.selection_trial_count == 8
     assert first.selection_code_set_accuracy == 1.0
+    assert first.selection_metrics is not None
+    assert first.selection_metrics.exact_target_event_set_accuracy == 1.0
+    assert first.selection_metrics.target_event_recall_at_k == 1.0
+    assert first.selection_metrics.target_event_average_precision == 1.0
+    assert first.selection_metrics.top_event_hit_rate == 1.0
 
     unknown = make_batch("P_04", seed=4, unknown=True)
     replay_only = evaluate_decoder(decoder, (unknown,))

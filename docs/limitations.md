@@ -8,13 +8,16 @@ speech, identity, diagnosis, or private intent from scalp EEG.
 
 - Controlled simulation keeps the intended span visible and uses synthetic neural probabilities.
   It tests software mechanics, not free-form candidate recall or participant performance.
-- Study P models solve the source target/non-target flash task. Event AUROC and stimulus-code
-  accuracy are not word accuracy, message accuracy, or clinical communication speed.
+- Study P models solve the source target/non-target flash task. Event AUROC and occurrence-level
+  target-event ranking metrics are not word accuracy, message accuracy, or clinical communication
+  speed. Exact target-event-set recovery is especially stringent and must not be labeled ordinary
+  symbol accuracy.
 - Counterfactual replay maps a recorded target position to a candidate tile. The source participant
   did not select or endorse the displayed word.
-- The repository contains no complete all-subject Study P result, bundled trained language-model
-  LoRA, claim-eligible A–F fusion result, live EEG result, or participant usability study. The
-  implemented LoRA workflow is not evidence until it is run and its local artifacts are evaluated.
+- The repository has complete fixed-split xDAWN and held-out language artifacts plus a balanced
+  A–F counterfactual replay. It still contains no live EEG result, participant-authored
+  NeuroSelect message, or participant usability study. Local model artifacts remain ignored and
+  must be verified through their manifests.
 - Modeled interaction time is not wall-clock latency or measured user speed. Hierarchical
   bootstrap intervals are descriptive and do not establish efficacy or non-inferiority.
 
@@ -43,3 +46,8 @@ prove comprehension, capacity, voluntariness, authorship, or the absence of inte
 The project is not a medical device, diagnostic tool, treatment, emergency service, or substitute
 for an established augmentative and alternative communication system. Do not make consequential
 decisions from its outputs.
+
+The frozen language evaluation makes an intended span available in only about 29% of rounds and
+never makes every span of a held-out message available. Conditional ranking improvements therefore
+do not establish end-to-end message completion. Profile-level effects are heterogeneous, including
+a negative top-1 effect for the concise synthetic profile.

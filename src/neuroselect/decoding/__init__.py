@@ -6,6 +6,7 @@ from neuroselect.decoding.classical import (
     evaluate_decoder,
     fit_calibrated_decoder,
     load_classical_decoder_config,
+    selection_metrics_from_predictions,
 )
 from neuroselect.decoding.datasets import load_partitioned_epoch_batches
 from neuroselect.decoding.models import (
@@ -19,6 +20,7 @@ from neuroselect.decoding.models import (
     EEGNetConfig,
     EEGNetTrainingSummary,
     EpochPrediction,
+    SelectionDecoderMetrics,
     SubjectAdaptationSummary,
     SubjectDriftEvaluation,
 )
@@ -49,6 +51,7 @@ __all__ = [
     "EEGNetTrainingSummary",
     "EpochPrediction",
     "InsufficientAdaptationDataError",
+    "SelectionDecoderMetrics",
     "SubjectAdaptationSummary",
     "SubjectDriftEvaluation",
     "adapt_eegnet_head",
@@ -61,6 +64,7 @@ __all__ = [
     "load_partitioned_epoch_batches",
     "read_decoder_artifacts",
     "read_eegnet_artifacts",
+    "selection_metrics_from_predictions",
     "write_decoder_artifacts",
     "write_eegnet_artifacts",
 ]

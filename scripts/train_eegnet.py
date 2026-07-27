@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import resource
 import subprocess
+import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -37,6 +40,19 @@ def parse_args() -> argparse.Namespace:
         default=Path("artifacts/models/p300-eegnet-v1"),
     )
     parser.add_argument("--overwrite", action="store_true")
+    parser.add_argument(
+        "--batch-limit-per-partition",
+        type=int,
+        help="Development pilot only: use the first N recording batches in each partition.",
+    )
+    parser.add_argument(
+        "--skip-drift",
+        action="store_true",
+        help=(
+            "Skip chronological subject adaptation when only the original-task comparator "
+            "is needed."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -71,13 +87,24 @@ def git_state() -> tuple[str, str | None]:
 
 def main() -> None:
     args = parse_args()
+    started = time.monotonic()
+    if args.batch_limit_per_partition is not None and args.batch_limit_per_partition < 1:
+        raise ValueError("batch limit must be positive")
     config = load_eegnet_config(args.config)
     batches = load_partitioned_epoch_batches(args.processed_root)
+    if args.batch_limit_per_partition is not None:
+        batches = {
+            partition: rows[: args.batch_limit_per_partition] for partition, rows in batches.items()
+        }
     decoder, summary = fit_eegnet_decoder(
         batches[DataSplit.TRAIN], batches[DataSplit.VALIDATION], config
     )
     evaluation = evaluate_decoder(decoder, batches[DataSplit.TEST])
-    drift = evaluate_chronological_session_drift(decoder, batches[DataSplit.TEST])
+    drift = (
+        None
+        if args.skip_drift
+        else evaluate_chronological_session_drift(decoder, batches[DataSplit.TEST])
+    )
     revision, source_tree_sha256 = git_state()
     manifest = write_eegnet_artifacts(
         decoder,
@@ -96,10 +123,21 @@ def main() -> None:
     print(f"Selected epoch: {summary.selected_epoch}")
     print(f"Held-subject AUROC: {evaluation.metrics.auroc:.4f}")
     print(f"Held-subject Brier score: {evaluation.metrics.brier_score:.4f}")
-    print(f"Chronological subjects: {len(drift.subjects)}")
-    print(f"Subject-independent fallbacks: {drift.fallback_subject_count}")
-    print(f"Mean adapted AUROC delta: {drift.mean_auroc_delta:+.4f}")
-    print(f"Mean adapted Brier delta: {drift.mean_brier_delta:+.4f}")
+    if evaluation.selection_metrics is not None:
+        print(f"Target-event recall@K: {evaluation.selection_metrics.target_event_recall_at_k:.4f}")
+        print(
+            "Target-event average precision: "
+            f"{evaluation.selection_metrics.target_event_average_precision:.4f}"
+        )
+    if drift is not None:
+        print(f"Chronological subjects: {len(drift.subjects)}")
+        print(f"Subject-independent fallbacks: {drift.fallback_subject_count}")
+        print(f"Mean adapted AUROC delta: {drift.mean_auroc_delta:+.4f}")
+        print(f"Mean adapted Brier delta: {drift.mean_brier_delta:+.4f}")
+    peak_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    peak_gib = peak_rss / 1024**3 if sys.platform == "darwin" else peak_rss / 1024**2
+    print(f"Elapsed: {(time.monotonic() - started) / 60:.1f}m")
+    print(f"Peak process RSS: {peak_gib:.2f} GiB")
     print(f"Artifacts: {args.output}")
 
 

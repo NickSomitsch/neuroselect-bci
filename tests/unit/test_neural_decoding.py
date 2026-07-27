@@ -160,6 +160,8 @@ def test_eegnet_is_deterministic_calibrated_and_cpu_compatible(
     assert evaluation.metrics is not None
     assert evaluation.metrics.auroc > 0.8
     assert evaluation.selection_trial_count == 8
+    assert evaluation.selection_metrics is not None
+    assert 0.0 <= evaluation.selection_metrics.target_event_recall_at_k <= 1.0
     probabilities = decoder.predict_probabilities(test.data)
     assert np.isfinite(probabilities).all()
     assert np.all((probabilities >= 0.0) & (probabilities <= 1.0))

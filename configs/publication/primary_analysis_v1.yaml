@@ -1,0 +1,11 @@
+schema_version: "1.0"
+analysis_id: neuroselect-offline-primary-analysis-v1
+analysis_revision: offline-primary-analysis-v1
+analyzed_at: 2026-07-27T17:00:00+02:00
+publication_protocol: configs/publication/offline_methods_v1.yaml
+eegnet_artifacts: artifacts/models/p300-eegnet-research-v1
+eegnet_required: true
+expected_eegnet_manifest_sha256: aa5fb6a6f426ed3bcf2c3c033250c1209ffe3e92348260f07d940ff2685d9744
+confidence_level: 0.95
+bootstrap_resamples: 10000
+bootstrap_seed: 20260727

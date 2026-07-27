@@ -17,6 +17,7 @@ from mne.decoding import Vectorizer, XdawnTransformer
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
+    average_precision_score,
     balanced_accuracy_score,
     brier_score_loss,
     log_loss,
@@ -30,6 +31,7 @@ from neuroselect.decoding.models import (
     DecoderEvaluation,
     DecoderTrainingSummary,
     EpochPrediction,
+    SelectionDecoderMetrics,
 )
 from neuroselect.eeg import (
     DataSplit,
@@ -314,11 +316,18 @@ def _expected_calibration_error(
     return result
 
 
-def _selection_accuracy(predictions: tuple[EpochPrediction, ...]) -> tuple[int, float | None]:
+def selection_metrics_from_predictions(
+    predictions: Sequence[EpochPrediction],
+) -> tuple[int, SelectionDecoderMetrics | None]:
+    """Score occurrence-level target-event ranking within each selection trial."""
+
     trials: dict[str, list[EpochPrediction]] = defaultdict(list)
     for prediction in predictions:
         trials[prediction.selection_trial_id].append(prediction)
-    outcomes: list[bool] = []
+    exact_outcomes: list[bool] = []
+    recall_at_k: list[float] = []
+    average_precisions: list[float] = []
+    top_hits: list[bool] = []
     for trial in trials.values():
         if any(
             item.true_label is P300Label.UNKNOWN or item.stimulus_code is None for item in trial
@@ -331,15 +340,30 @@ def _selection_accuracy(predictions: tuple[EpochPrediction, ...]) -> tuple[int, 
         for item in trial:
             assert item.stimulus_code is not None
             by_code[item.stimulus_code].append(item.target_probability)
-        predicted_codes = {
+        ranked_codes = tuple(
             code
             for code, _ in sorted(
                 by_code.items(),
                 key=lambda item: (-float(np.mean(item[1])), item[0]),
-            )[: len(target_codes)]
-        }
-        outcomes.append(predicted_codes == target_codes)
-    return len(outcomes), float(np.mean(outcomes)) if outcomes else None
+            )
+        )
+        predicted_codes = set(ranked_codes[: len(target_codes)])
+        labels = np.asarray([code in target_codes for code in ranked_codes], dtype=np.int8)
+        probabilities = np.asarray(
+            [float(np.mean(by_code[code])) for code in ranked_codes], dtype=np.float64
+        )
+        exact_outcomes.append(predicted_codes == target_codes)
+        recall_at_k.append(len(predicted_codes & target_codes) / len(target_codes))
+        average_precisions.append(float(average_precision_score(labels, probabilities)))
+        top_hits.append(ranked_codes[0] in target_codes)
+    if not exact_outcomes:
+        return 0, None
+    return len(exact_outcomes), SelectionDecoderMetrics(
+        exact_target_event_set_accuracy=float(np.mean(exact_outcomes)),
+        target_event_recall_at_k=float(np.mean(recall_at_k)),
+        target_event_average_precision=float(np.mean(average_precisions)),
+        top_event_hit_rate=float(np.mean(top_hits)),
+    )
 
 
 class EvaluationDecoder(Protocol):
@@ -396,7 +420,7 @@ def evaluate_decoder(
                 labels, labeled_probabilities, decoder.calibration_bins
             ),
         )
-    trial_count, selection_accuracy = _selection_accuracy(predictions)
+    trial_count, selection_metrics = selection_metrics_from_predictions(predictions)
     return DecoderEvaluation(
         dataset_sha256=collection.dataset_sha256,
         predictions=predictions,
@@ -404,5 +428,10 @@ def evaluate_decoder(
         unknown_epoch_count=len(collection.labels) - labeled_count,
         metrics=metrics,
         selection_trial_count=trial_count,
-        selection_code_set_accuracy=selection_accuracy,
+        selection_code_set_accuracy=(
+            selection_metrics.exact_target_event_set_accuracy
+            if selection_metrics is not None
+            else None
+        ),
+        selection_metrics=selection_metrics,
     )

@@ -1,0 +1,188 @@
+schema_version: "1.0"
+protocol_id: neuroselect-offline-methods-paper-v1
+protocol_revision: offline-methods-v1
+frozen_at: 2026-07-27T16:42:08+02:00
+working_title: "NeuroSelect: A Reproducible Offline Framework for Personalized Language Ranking and P300 Candidate Fusion"
+article_kind: offline_computational_original_research
+study_design: secondary_public_eeg_and_synthetic_language
+human_participant_recruitment: false
+primary_author: Nick Somitsch
+
+journal_routes:
+  - journal_id: taylor-francis-rbet
+    name: Research in Biomedical Engineering and Technology
+    priority: 1
+    route_kind: current_primary
+    article_type: Original Research
+    official_url: https://www.tandfonline.com/journals/tbci20
+    rationale: >-
+      Primary route because the article is an offline BCI/neural-engineering methods and
+      validation study, and an eligible University of Innsbruck corresponding student author
+      may receive Taylor & Francis open-access coverage.
+    submission_gate_ids:
+      - uibk-open-access
+      - secondary-use-ethics
+      - domain-review
+      - author-metadata
+  - journal_id: frontiers-neuroinformatics
+    name: Frontiers in Neuroinformatics
+    priority: 2
+    route_kind: current_fallback
+    article_type: Methods or Technology and Code
+    official_url: https://www.frontiersin.org/journals/neuroinformatics/about
+    rationale: >-
+      Scope-compatible fallback for a computational neuroscience tool with public-data
+      validation, usable only after publication-fee support is confirmed.
+    submission_gate_ids:
+      - secondary-use-ethics
+      - domain-review
+      - author-metadata
+  - journal_id: joss-future
+    name: Journal of Open Source Software
+    priority: 3
+    route_kind: future_separate
+    article_type: Software paper
+    official_url: https://joss.readthedocs.io/en/latest/submitting.html
+    rationale: >-
+      A possible separate software paper after sustained public maturation and reuse; it is not
+      a fallback venue for the current empirical manuscript.
+    submission_gate_ids: []
+
+evidence_report:
+  path: artifacts/reports/neuroselect-research-release-v1
+  expected_run_id: research-report-ad144bbd79ee753af109
+  expected_manifest_sha256: 79d8c009a41aaefab190a62d729b979bb65d15bcba33437f494465c44ace0c73
+  require_release_ready: true
+  require_clean_source: true
+
+evidence_sources:
+  - source_id: controlled-simulation
+    path: artifacts/evaluation/simulated-vertical-slice-v2
+    evidence_kind: controlled_simulation
+    evidence_role: engineering_context
+    expected_run_id: sim-eval-d1e8a21c21bd59ec0d65
+    expected_run_kind: simulation
+    expected_git_sha: 695b14774cc6ff1b6e92a19ce6fa766d84615554
+    expected_manifest_sha256: 11dfa8cf261d85ecfbb1b36bde8de7d321b5a13a38b0fb391f045a62b4922e34
+    expected_report_claim_eligible: false
+    require_clean_source: true
+  - source_id: held-out-language
+    path: artifacts/evaluation/held-out-language-personalization-research-v1
+    evidence_kind: language_component
+    evidence_role: primary
+    expected_run_id: held-out-language-cd9949553ffefe6ea6e4
+    expected_run_kind: component_evaluation
+    expected_git_sha: eddc4e729d10bd83fce988de620603c50c0b6aab
+    expected_manifest_sha256: 0ae04ed11f8ff842503a9f3ec241841b4ff20a0baf46445648d3c6e7c4069b65
+    expected_report_claim_eligible: true
+    require_clean_source: true
+  - source_id: xdawn-original-task
+    path: artifacts/models/p300-xdawn-lda-research-v1
+    evidence_kind: eeg_original_task
+    evidence_role: primary
+    expected_run_id: p300-baseline-e9813aba2df81c022465
+    expected_run_kind: eeg_original_task
+    expected_git_sha: e8ead94da2c12a0710a897ef048524a68d18b551
+    expected_manifest_sha256: 729c080fab7e848e7a363fcc50cdf44897cad9b4b407a053f74c27271b0061a6
+    expected_report_claim_eligible: true
+    require_clean_source: true
+  - source_id: counterfactual-research
+    path: artifacts/evaluation/counterfactual-fusion-research-v1
+    evidence_kind: counterfactual_replay
+    evidence_role: primary
+    expected_run_id: counterfactual-fusion-4c4f350a3bc93cdfaec0
+    expected_run_kind: counterfactual_replay
+    expected_git_sha: eddc4e729d10bd83fce988de620603c50c0b6aab
+    expected_manifest_sha256: 789d75b415c32133d85cfae3b043c9b21230089345001b5c53f330590041cef6
+    expected_report_claim_eligible: true
+    require_clean_source: true
+
+research_questions:
+  - question_id: RQ1
+    question: How often does target-blind candidate generation make intended synthetic spans available?
+    evidence_source_ids: [held-out-language]
+    primary_estimands:
+      - target availability overall and by profile, span position, and phrase length
+      - complete-message target availability
+  - question_id: RQ2
+    question: Conditional on target availability, how does adapter personalization change language ranking?
+    evidence_source_ids: [held-out-language]
+    primary_estimands:
+      - paired personalized-minus-generic mean reciprocal rank
+      - paired conditional and unconditional top-1 and top-3 recall
+  - question_id: RQ3
+    question: How well does the locked xDAWN-LDA decoder perform on held-out original-task Study P data?
+    evidence_source_ids: [xdawn-original-task]
+    primary_estimands:
+      - per-subject and aggregate AUROC, Brier score, and calibration error
+      - selection-level target-event ranking metrics
+  - question_id: RQ4
+    question: Does complete fusion improve offline counterfactual ranking or completion over prespecified component conditions?
+    evidence_source_ids: [counterfactual-research]
+    primary_estimands:
+      - complete-system minus BCI-only top-1 recall and completion rate
+      - personalization, retrieval, and safety-policy paired contrasts
+  - question_id: RQ5
+    question: Which observed limitations arise from candidate coverage, ranking, neural decoding, retrieval, or safety policy?
+    evidence_source_ids:
+      - controlled-simulation
+      - held-out-language
+      - xdawn-original-task
+      - counterfactual-research
+    primary_estimands:
+      - evidence-tier-separated bottleneck decomposition
+
+claim_policy:
+  allowed:
+    - NeuroSelect is a reproducible offline framework with checksum-addressed evidence tiers.
+    - Results describe synthetic language, original-task public EEG, and counterfactual replay separately.
+    - Candidate availability is an observed bottleneck in the frozen synthetic-language evaluation.
+    - Personalization changed conditional ranking on average with heterogeneous profile-level effects.
+    - The frozen replay did not demonstrate a meaningful complete-system advantage over BCI-only decoding.
+  prohibited:
+    - NeuroSelect decodes unrestricted thoughts or user intent.
+    - NeuroSelect improves communication for people in live use.
+    - NeuroSelect has demonstrated clinical efficacy, safety, or medical-device performance.
+    - Synthetic or counterfactual messages are participant-authored communication.
+    - Claim eligibility means that an effect is positive, conclusive, or population-generalizable.
+
+analysis_commitments:
+  primary_evidence_frozen: true
+  existing_evidence_timing: retrospective_publication_protocol
+  future_analysis_timing: prospectively_locked_from_protocol_freeze
+  candidate_v2_role: exploratory_supplement
+  outcome_based_omission_forbidden: true
+  inference_scope: descriptive_fixed_samples
+  bootstrap_resamples: 10000
+  bootstrap_seed: 20260727
+
+submission_gates:
+  - gate_id: uibk-open-access
+    status: pending
+    owner: corresponding author and University of Innsbruck Library
+    requirement: >-
+      Obtain written confirmation from open-access@uibk.ac.at that the target journal, Original
+      Research article type, student corresponding-author status, and remaining allocation are
+      eligible for Taylor & Francis open-access coverage.
+    required_for_primary_submission: true
+  - gate_id: secondary-use-ethics
+    status: pending
+    owner: corresponding author and University of Innsbruck supervisor or ethics contact
+    requirement: >-
+      Obtain written institutional wording for the use of deidentified public Study P data; do
+      not independently claim that the work is exempt from additional ethics review.
+    required_for_primary_submission: true
+  - gate_id: domain-review
+    status: pending
+    owner: BCI domain reviewer
+    requirement: >-
+      Have a supervisor or independent BCI researcher review the scientific framing, EEG metrics,
+      evidence hierarchy, and limitations before submission.
+    required_for_primary_submission: true
+  - gate_id: author-metadata
+    status: pending
+    owner: corresponding author
+    requirement: >-
+      Confirm University of Innsbruck affiliation, institutional email, ORCID, funding statement,
+      conflicts, CRediT roles, and final authorship before submission.
+    required_for_primary_submission: true

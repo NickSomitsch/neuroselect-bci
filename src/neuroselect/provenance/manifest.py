@@ -19,6 +19,7 @@ class RunKind(StrEnum):
     COUNTERFACTUAL_REPLAY = "counterfactual_replay"
     COMPONENT_EVALUATION = "component_evaluation"
     RESEARCH_REPORT = "research_report"
+    PUBLICATION_ANALYSIS = "publication_analysis"
 
 
 class RunStatus(StrEnum):

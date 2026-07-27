@@ -89,6 +89,17 @@ class BinaryDecoderMetrics(BaseModel):
     expected_calibration_error: float = Field(ge=0.0, le=1.0)
 
 
+class SelectionDecoderMetrics(BaseModel):
+    """Selection-level ranking metrics over occurrence-level target events."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    exact_target_event_set_accuracy: float = Field(ge=0.0, le=1.0)
+    target_event_recall_at_k: float = Field(ge=0.0, le=1.0)
+    target_event_average_precision: float = Field(ge=0.0, le=1.0)
+    top_event_hit_rate: float = Field(ge=0.0, le=1.0)
+
+
 class DecoderEvaluation(BaseModel):
     """Predictions and metrics for a leakage-safe held-out epoch collection."""
 
@@ -100,7 +111,10 @@ class DecoderEvaluation(BaseModel):
     unknown_epoch_count: int = Field(ge=0)
     metrics: BinaryDecoderMetrics | None = None
     selection_trial_count: int = Field(default=0, ge=0)
+    # Retained for v1 artifact compatibility. Study P stimulus codes in these
+    # artifacts identify occurrence-level events, not NeuroSelect symbols.
     selection_code_set_accuracy: float | None = Field(default=None, ge=0.0, le=1.0)
+    selection_metrics: SelectionDecoderMetrics | None = None
 
     @model_validator(mode="after")
     def validate_counts(self) -> DecoderEvaluation:
@@ -110,6 +124,14 @@ class DecoderEvaluation(BaseModel):
             raise ValueError("metrics are present exactly when labeled epochs are present")
         if (self.selection_trial_count == 0) != (self.selection_code_set_accuracy is None):
             raise ValueError("selection accuracy requires at least one scorable trial")
+        if self.selection_metrics is not None and self.selection_trial_count == 0:
+            raise ValueError("selection metrics require at least one scorable trial")
+        if (
+            self.selection_metrics is not None
+            and self.selection_code_set_accuracy
+            != self.selection_metrics.exact_target_event_set_accuracy
+        ):
+            raise ValueError("legacy selection accuracy must match exact target-event-set accuracy")
         return self
 
 
