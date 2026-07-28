@@ -58,6 +58,15 @@ descriptive 95% bootstrap interval 21.9 to 25.7) and complete-message availabili
 (interval for the difference 1.3 to 3.0). These results diagnose candidate-set construction on the
 fixed synthetic benchmark; they are not live-use evidence and do not replace the primary result.
 
+Step 4 then separates the v2 components and evaluates a new held-out-combination benchmark.
+Removing grammar routing reduced original-set availability to 12.9%, whereas removing profile
+conditioning reduced it to 47.3%. A two-stage opening interface increased original opening
+availability from 4.8% to 18.8% and complete-message availability from 2.1% to 9.1%. On the
+developer-authored robustness benchmark, exact full openings were unavailable to every one-stage
+method; two-stage composition covered all three stems and nine actions and yielded 32.3% complete
+messages. The latter 100% opening result is a constrained factorial stress test, not evidence for
+arbitrary openings. Both Step 3 and Step 4 remain exploratory supplements.
+
 ## Submission blockers
 
 Protocol validation is automated with:

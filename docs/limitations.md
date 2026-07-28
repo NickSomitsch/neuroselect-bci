@@ -56,3 +56,11 @@ The exploratory candidate-generation v2 comparison raises exact-span availabilit
 complete-message availability to 2.1%, but it is profile-conditioned, grammar-routed, and
 test-exposed. It diagnoses a candidate-set construction alternative on the same synthetic
 benchmark and cannot replace the frozen primary result.
+
+The Step 4 robustness benchmark deliberately holds out complete opening combinations while keeping
+their stems and actions observable during fitting. Two-stage composition reaches 100% opening
+coverage on that constrained benchmark, but this is not evidence of unrestricted natural-language
+coverage: only three stems and nine actions are present, the source is synthetic and
+developer-authored, and the offline replay teacher-forces the correct first-stage selection. The
+extra stage also adds one BCI selection to every opening. On the original test-exposed benchmark,
+opening availability is 18.8% rather than 100%.

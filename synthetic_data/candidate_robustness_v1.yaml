@@ -1,0 +1,118 @@
+schema_version: "1.0"
+seed: 20260728
+maximum_span_tokens: 4
+
+# The nine opening combinations in each split are disjoint. Each of the three
+# stems and each of the nine actions nevertheless occurs in train/validation,
+# so the test split measures held-out composition rather than unseen words.
+global_slots:
+  opening_actions_a: [bring, move, open]
+  opening_actions_b: [close, charge, find]
+  opening_actions_c: [check, refill, prepare]
+  object:
+    - the water bottle
+    - my notebook
+    - the phone charger
+    - the blue folder
+    - my headphones
+    - the coffee mug
+    - the house keys
+    - the desk lamp
+    - the shopping list
+    - the soft blanket
+    - the window shade
+    - the tablet stand
+    - the wall calendar
+    - today's mail
+    - the lunch bag
+    - the remote control
+  time_reference:
+    - eight o'clock
+    - nine thirty
+    - late morning
+    - before lunch
+    - early afternoon
+    - three o'clock
+    - after the break
+    - before dinner
+    - this evening
+    - tomorrow morning
+
+splits:
+  train:
+    count_per_profile: 1000
+    templates:
+      - template_id: robustness-train-help
+        topic: robustness_train_help
+        segments:
+          - "Please help {opening_actions_a}"
+          - "{object}"
+          - "before {time_reference}"
+          - "{request_suffix}"
+      - template_id: robustness-train-modal
+        topic: robustness_train_modal
+        segments:
+          - "Could you {opening_actions_b}"
+          - "{object}"
+          - "before {time_reference}"
+          - "{request_suffix}"
+      - template_id: robustness-train-now
+        topic: robustness_train_now
+        segments:
+          - "Let's now {opening_actions_c}"
+          - "{object}"
+          - "before {time_reference}"
+          - "{request_suffix}"
+
+  validation:
+    count_per_profile: 300
+    templates:
+      - template_id: robustness-validation-help
+        topic: robustness_validation_help
+        segments:
+          - "Please help {opening_actions_b}"
+          - "{object}"
+          - "Before"
+          - "{time_reference}"
+          - "{request_suffix}"
+      - template_id: robustness-validation-modal
+        topic: robustness_validation_modal
+        segments:
+          - "Could you {opening_actions_c}"
+          - "{object}"
+          - "Before"
+          - "{time_reference}"
+          - "{request_suffix}"
+      - template_id: robustness-validation-now
+        topic: robustness_validation_now
+        segments:
+          - "Let's now {opening_actions_a}"
+          - "{object}"
+          - "Before"
+          - "{time_reference}"
+          - "{request_suffix}"
+
+  test:
+    count_per_profile: 250
+    templates:
+      - template_id: robustness-test-help
+        topic: robustness_test_help
+        segments:
+          - "Please help {opening_actions_c}"
+          - "{object}"
+          - "Before {time_reference}"
+          - "{request_suffix}"
+      - template_id: robustness-test-modal
+        topic: robustness_test_modal
+        segments:
+          - "Could you {opening_actions_a}"
+          - "{object}"
+          - "Before {time_reference}"
+          - "{request_suffix}"
+      - template_id: robustness-test-now
+        topic: robustness_test_now
+        segments:
+          - "Let's now {opening_actions_b}"
+          - "{object}"
+          - "Before {time_reference}"
+          - "{request_suffix}"

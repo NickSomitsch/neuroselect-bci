@@ -1,4 +1,4 @@
-.PHONY: setup sync local-language-sync local-language-cuda-sync language-cuda-preflight language-model-cache ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation language-research-evaluation-cuda language-research-verify language-cloud-source-bundle language-cloud-bundle language-cloud-verify language-cloud-extract fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report publication-protocol-check publication-analysis candidate-generation-v2 release-check release study-p-data study-p-research-data p300-baseline p300-research-baseline p300-research-audit p300-eegnet p300-eegnet-pilot p300-eegnet-research p300-replay api format format-check lint typecheck test build package verify
+.PHONY: setup sync local-language-sync local-language-cuda-sync language-cuda-preflight language-model-cache ui-install synthetic-data synthetic-knowledge language-personalization-data language-smoke language-lora language-evaluation language-research-adapter language-research-evaluation language-research-evaluation-cuda language-research-verify language-cloud-source-bundle language-cloud-bundle language-cloud-verify language-cloud-extract fusion-smoke simulated-evaluation counterfactual-input counterfactual-fusion counterfactual-evaluation counterfactual-research-input counterfactual-research-evaluation research-readiness development-report research-report publication-protocol-check publication-analysis candidate-generation-v2 candidate-generation-step4 release-check release study-p-data study-p-research-data p300-baseline p300-research-baseline p300-research-audit p300-eegnet p300-eegnet-pilot p300-eegnet-research p300-replay api format format-check lint typecheck test build package verify
 
 STUDY_P_RESEARCH_SUBJECTS = P_01 P_02 P_03 P_04 P_05 P_06 P_07 P_08 P_09 P_10 P_11 P_12 P_13 P_14 P_15 P_16 P_17 P_18 P_19
 
@@ -140,6 +140,9 @@ publication-analysis:
 
 candidate-generation-v2:
 	uv run python scripts/run_candidate_generation_v2.py $(CANDIDATE_GENERATION_V2_ARGS)
+
+candidate-generation-step4:
+	uv run python scripts/run_candidate_generation_step4.py $(CANDIDATE_GENERATION_STEP4_ARGS)
 
 release-check:
 	uv run python scripts/check_release.py $(RELEASE_CHECK_ARGS)

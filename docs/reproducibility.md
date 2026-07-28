@@ -135,3 +135,18 @@ make release-check RELEASE_CHECK_ARGS="--report artifacts/reports/neuroselect-re
 5. Future live or participant study: unavailable and requiring a separate protocol.
 
 Absence of a higher tier cannot be filled by relabeling a lower tier.
+
+## Candidate-generation Step 4
+
+Run the locked CPU-only ablations and compositional-opening robustness analysis with:
+
+```bash
+make candidate-generation-step4 CANDIDATE_GENERATION_STEP4_ARGS="--overwrite"
+```
+
+The recipe pins the clean Step 3 manifest and deterministic robustness source. The runner first
+reproduces every full-v2 candidate list, verifies zero fit/test opening-combination overlap, and
+then executes all five methods without passing intended targets to a generator. Its manifest marks
+the source tree dirty when implementation changes have not yet been committed. For final
+publication provenance, commit the implementation and rerun the command once from the clean
+commit.

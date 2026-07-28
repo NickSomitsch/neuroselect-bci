@@ -1,0 +1,27 @@
+schema_version: "1.0"
+experiment_id: neuroselect-candidate-generation-step4-v1
+protocol_revision: candidate-generation-step4-v1
+locked_at: 2026-07-28T09:30:00+02:00
+publication_protocol: configs/publication/offline_methods_v1.yaml
+expected_protocol_sha256: 3beb95cc8dcf3a602e1671c8e7fe26adc615308c6523232a6d5a19728a900b5a
+
+step3_artifacts: artifacts/publication/candidate-generation-v2-exploratory-v1
+expected_step3_manifest_sha256: 19db319a0871a9c7d73c38d902a402c48cef3537e65be4089efe30ba2714de2b
+expected_step3_config_sha256: e9b8066980f675b6a61ed522ee70d7c358d0102d6f3d5fa7b40b93f7cb33d270
+
+robustness_benchmark_spec: synthetic_data/candidate_robustness_v1.yaml
+profiles_directory: synthetic_data/profiles
+expected_robustness_source_sha256: eb6df38cfcf6adef88d90bd718625cddb9d82ece11f4758fa682c848b7ef796b
+
+methods:
+  - full_v2
+  - no_profile_conditioning
+  - no_grammar_routing
+  - frequency_only
+  - two_stage_opening
+language_candidate_count: 9
+maximum_phrase_tokens: 4
+bootstrap_resamples: 10000
+bootstrap_seed: 20260728
+design_status: locked_before_execution_exploratory
+outcome_based_omission_forbidden: true
