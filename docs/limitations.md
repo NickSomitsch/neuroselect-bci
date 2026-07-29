@@ -64,3 +64,10 @@ coverage: only three stems and nine actions are present, the source is synthetic
 developer-authored, and the offline replay teacher-forces the correct first-stage selection. The
 extra stage also adds one BCI selection to every opening. On the original test-exposed benchmark,
 opening availability is 18.8% rather than 100%.
+
+The harder hierarchical experiment removes the small-menu advantage by using 24 fitted stems and
+48 content words. Intent/stem/content hierarchy covers 66.7% of held-out combinations, but requires
+three selections and exposes 19 candidates across its menus. All tested retrieval hierarchies have
+0% exact coverage for completely unseen paraphrase-family stems. Hierarchy therefore improves
+composition of known parts but does not solve open-vocabulary generation. The source remains
+synthetic and developer-authored.

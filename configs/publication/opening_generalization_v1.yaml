@@ -1,0 +1,22 @@
+schema_version: "1.0"
+experiment_id: neuroselect-opening-generalization-experiment-v1
+protocol_revision: opening-generalization-experiment-v1
+locked_at: 2026-07-28T14:16:00+02:00
+publication_protocol: configs/publication/offline_methods_v1.yaml
+expected_protocol_sha256: 3beb95cc8dcf3a602e1671c8e7fe26adc615308c6523232a6d5a19728a900b5a
+
+step4_artifacts: artifacts/publication/candidate-generation-step4-v1
+expected_step4_manifest_sha256: ec401079ce88d4a7d275e9bb5b519a5fcf95f06dbb80f48ea4e490cdd120b1e6
+
+benchmark_source: synthetic_data/opening_generalization_v1.yaml
+expected_benchmark_source_sha256: b1bbb41d16f61fa45279547a69187540663d883d746263fb37a2da55c3534449
+
+methods:
+  - one_stage_phrase
+  - two_stage_stem_content
+  - three_stage_intent_stem_content
+candidate_budget: 9
+bootstrap_resamples: 10000
+bootstrap_seed: 20260728
+design_status: locked_before_execution_exploratory
+outcome_based_omission_forbidden: true

@@ -497,6 +497,20 @@ action. The CPU-only run writes checksummed trials, metrics, paired 95% interval
 and generated robustness splits under `artifacts/publication/candidate-generation-step4-v1/`.
 The benchmark is synthetic and developer-authored, so this remains exploratory evidence.
 
+Run the harder hierarchical opening-generalization experiment with:
+
+```bash
+make opening-generalization OPENING_GENERALIZATION_ARGS="--overwrite"
+```
+
+This locked CPU-only experiment expands the bottleneck beyond one menu: 24 fitted stems and 48
+content words cover requests, preferences, clarifications, and status openings. It evaluates 288
+held-out combinations plus 384 openings from paraphrase families absent from fitting. Complete
+phrase retrieval, two-stage stem/content composition, and three-stage intent/stem/content
+composition share a maximum menu size of nine. Outputs include exact coverage, paired intervals,
+menus reached, candidate exposures, and coverage per required selection under
+`artifacts/publication/opening-generalization-v1/`.
+
 ## Research boundaries
 
 The first real-data integration uses offline P300 replay. Recorded target evidence may be mapped
@@ -504,7 +518,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md), [exploratory candidate-generation ADR](docs/adr/0027-exploratory-target-blind-candidate-generation-v2.md), and [opening-robustness ADR](docs/adr/0028-candidate-generation-ablation-and-opening-robustness.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md), [exploratory candidate-generation ADR](docs/adr/0027-exploratory-target-blind-candidate-generation-v2.md), [opening-robustness ADR](docs/adr/0028-candidate-generation-ablation-and-opening-robustness.md), and [hierarchical-opening ADR](docs/adr/0029-hierarchical-opening-generalization.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

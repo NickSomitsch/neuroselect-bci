@@ -150,3 +150,17 @@ then executes all five methods without passing intended targets to a generator. 
 the source tree dirty when implementation changes have not yet been committed. For final
 publication provenance, commit the implementation and rerun the command once from the clean
 commit.
+
+## Hierarchical opening generalization
+
+Run the separately locked harder opening experiment with:
+
+```bash
+make opening-generalization OPENING_GENERALIZATION_ARGS="--overwrite"
+```
+
+The runner verifies the clean Step 4 manifest, the benchmark-source digest, pair-partition
+isolation, absent-family stems, target-blind generator APIs, and every output checksum. Its
+candidate bank traverses only train and validation records. As with Step 4, commit the
+implementation and rerun once before pinning the artifact in publication tables so the final
+manifest records clean source provenance.

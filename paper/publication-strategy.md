@@ -67,6 +67,14 @@ method; two-stage composition covered all three stems and nine actions and yield
 messages. The latter 100% opening result is a constrained factorial stress test, not evidence for
 arbitrary openings. Both Step 3 and Step 4 remain exploratory supplements.
 
+The subsequent hierarchical stress test uses more components than fit in one menu and adds
+requests, preferences, clarifications, and status openings. For unseen fitted-component
+combinations, complete-phrase retrieval reached 0%, global two-stage composition 25.0%, and
+intent-conditioned three-stage composition 66.7%. Availability per required selection was 0,
+0.125, and 0.222 respectively. All three methods reached 0% for test-only paraphrase-family stems,
+which is reported as a closed-vocabulary limitation rather than omitted. This experiment remains
+an exploratory, developer-authored synthetic supplement.
+
 ## Submission blockers
 
 Protocol validation is automated with:

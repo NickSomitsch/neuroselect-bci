@@ -1,0 +1,117 @@
+schema_version: "1.0"
+benchmark_id: neuroselect-opening-generalization-v1
+revision: opening-generalization-v1
+seed: 20260728
+profile_ids:
+  - synthetic-casual
+  - synthetic-concise
+  - synthetic-formal
+  - synthetic-reflective
+candidate_budget: 9
+maximum_opening_tokens: 5
+pair_partition:
+  modulus: 12
+  train_residues: [0, 1, 2, 3, 4, 5, 6, 7]
+  validation_residues: [8]
+  combination_test_residues: [9, 10, 11]
+
+intents:
+  - intent_id: request
+    fitted_stems:
+      - Please help
+      - Could you
+      - Would you please
+      - Can you kindly
+      - Please remember to
+      - Would you mind
+    heldout_family_stems:
+      - Could you perhaps
+      - Please arrange to
+    contents:
+      - bring
+      - move
+      - open
+      - close
+      - charge
+      - find
+      - check
+      - refill
+      - prepare
+      - place
+      - send
+      - read
+
+  - intent_id: preference
+    fitted_stems:
+      - I would prefer
+      - Please choose
+      - My preference is
+      - I would select
+      - Let's use
+      - I favor
+    heldout_family_stems:
+      - On reflection choose
+      - I would lean toward
+    contents:
+      - blue
+      - compact
+      - quiet
+      - early
+      - written
+      - short
+      - light
+      - morning
+      - simple
+      - slow
+      - private
+      - paper
+
+  - intent_id: clarification
+    fitted_stems:
+      - Did you mean
+      - Please confirm
+      - Could you clarify
+      - Was that
+      - Do you mean
+      - Kindly verify
+    heldout_family_stems:
+      - Let us distinguish
+      - Please clarify whether
+    contents:
+      - bottle
+      - notebook
+      - charger
+      - folder
+      - headphones
+      - mug
+      - keys
+      - lamp
+      - list
+      - blanket
+      - shade
+      - tablet
+
+  - intent_id: status
+    fitted_stems:
+      - I currently feel
+      - My status is
+      - I remain
+      - I am still
+      - Today I feel
+      - I seem
+    heldout_family_stems:
+      - At present I feel
+      - I happen to be
+    contents:
+      - ready
+      - comfortable
+      - tired
+      - focused
+      - finished
+      - waiting
+      - uncertain
+      - available
+      - busy
+      - cold
+      - warm
+      - hungry
