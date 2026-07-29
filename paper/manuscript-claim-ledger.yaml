@@ -1,0 +1,354 @@
+- claim_id: language-analysis-units
+  source_path: artifacts/publication/paper-display-v1/tables/table-1-evidence-hierarchy.csv
+  source_kind: csv
+  row_match:
+    Component: Held-out language
+  field: Analysis units
+  expected: 3990 spans / 1000 messages / 4 fixed profiles
+  required_text: "3,990 held-out next-span trials from\n1,000 messages"
+  evidence_role: method
+- claim_id: message-count
+  source_path: artifacts/evaluation/held-out-language-personalization-research-v1/result.json
+  source_kind: json
+  field: metrics
+  transform: length
+  expected: 5
+  required_text: "four fixed synthetic communication profiles"
+  evidence_role: method
+- claim_id: qwen-model
+  source_path: configs/models/qwen3_4b_mlx.yaml
+  source_kind: yaml
+  field: model_id
+  expected: Qwen/Qwen3-4B-MLX-4bit
+  required_text: "Qwen/Qwen3-4B-MLX-4bit"
+  evidence_role: method
+- claim_id: candidate-budget
+  source_path: configs/publication/candidate_generation_step4.yaml
+  source_kind: yaml
+  field: language_candidate_count
+  expected: 9
+  required_text: "limited each visible menu\nto nine language candidates"
+  evidence_role: method
+- claim_id: study-p-subjects
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: subjects
+  expected: 19
+  required_text: "19 participants and 228 EDF+ spelling-block recordings"
+  evidence_role: method
+- claim_id: study-p-files
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: source_file_count
+  expected: 228
+  required_text: "19 participants and 228 EDF+ spelling-block recordings"
+  evidence_role: method
+- claim_id: study-p-channels
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: channels
+  expected: 32
+  required_text: "32 EEG channels at 256 Hz"
+  evidence_role: method
+- claim_id: study-p-sampling
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: sampling_rate_hz
+  expected: 256
+  required_text: "32 EEG channels at 256 Hz"
+  evidence_role: method
+- claim_id: split-train-subjects
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: model_split.train_subjects
+  transform: length
+  expected: 13
+  required_text: "13 training, 3 validation, and 3 test\nparticipants"
+  evidence_role: method
+- claim_id: split-validation-subjects
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: model_split.validation_subjects
+  transform: length
+  expected: 3
+  required_text: "13 training, 3 validation, and 3 test\nparticipants"
+  evidence_role: method
+- claim_id: split-test-subjects
+  source_path: configs/datasets/bigp3bci_study_p.yaml
+  source_kind: yaml
+  field: model_split.test_subjects
+  transform: length
+  expected: 3
+  required_text: "13 training, 3 validation, and 3 test\nparticipants"
+  evidence_role: method
+- claim_id: counterfactual-analysis-units
+  source_path: artifacts/publication/paper-display-v1/tables/table-1-evidence-hierarchy.csv
+  source_kind: csv
+  row_match:
+    Component: Counterfactual replay
+  field: Analysis units
+  expected: 144 trials per condition / 3 held-out subjects
+  required_text: "144 counterfactual trials from 3 held-out EEG participants"
+  evidence_role: method
+- claim_id: bootstrap-resamples
+  source_path: configs/publication/offline_methods_v1.yaml
+  source_kind: yaml
+  field: analysis_commitments.bootstrap_resamples
+  expected: 10000
+  required_text: "10,000 bootstrap resamples"
+  evidence_role: method
+- claim_id: language-availability
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Overall
+  field: Target available
+  expected: "0.287"
+  required_text: "exact target availability was **0.287**"
+  evidence_role: primary
+- claim_id: language-availability-ci
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Overall
+  field: Availability 95% CI
+  expected: "[0.273, 0.301]"
+  required_text: "interval of **[0.273, 0.301]**"
+  evidence_role: primary
+- claim_id: language-generic-top1
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Overall
+  field: Generic top-1 (all)
+  expected: "0.041"
+  required_text: "generic and personalized top-1\nrecalls were 0.041 and 0.068"
+  evidence_role: primary
+- claim_id: language-personalized-top1
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Overall
+  field: Personalized top-1 (all)
+  expected: "0.068"
+  required_text: "generic and personalized top-1\nrecalls were 0.041 and 0.068"
+  evidence_role: primary
+- claim_id: language-top1-delta
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Overall
+  field: Top-1 delta given available (95% CI)
+  expected: "+0.096 [+0.064, +0.129]"
+  required_text: "+0.096 [95% CI +0.064, +0.129]"
+  evidence_role: primary
+- claim_id: language-mrr-delta
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Overall
+  field: MRR delta given available (95% CI)
+  expected: "+0.087 [+0.063, +0.112]"
+  required_text: "+0.087 [95% CI\n+0.063, +0.112]"
+  evidence_role: primary
+- claim_id: concise-top1-delta
+  source_path: artifacts/publication/paper-display-v1/tables/table-2-language-primary.csv
+  source_kind: csv
+  row_match:
+    Profile: Concise
+  field: Top-1 delta given available (95% CI)
+  expected: "-0.091 [-0.152, -0.029]"
+  required_text: "-0.091 [95% CI -0.152, -0.029]"
+  evidence_role: primary
+- claim_id: xdawn-epochs
+  source_path: artifacts/publication/paper-display-v1/tables/table-3-p300-original-task.csv
+  source_kind: csv
+  row_match:
+    Model: xDAWN-LDA
+  field: Labeled epochs
+  expected: "21491"
+  required_text: "21,491 labeled test epochs"
+  evidence_role: primary
+- claim_id: xdawn-auroc
+  source_path: artifacts/publication/paper-display-v1/tables/table-3-p300-original-task.csv
+  source_kind: csv
+  row_match:
+    Model: xDAWN-LDA
+  field: AUROC
+  expected: "0.800"
+  required_text: "xDAWN-LDA achieved **AUROC 0.800**"
+  evidence_role: primary
+- claim_id: xdawn-brier
+  source_path: artifacts/publication/paper-display-v1/tables/table-3-p300-original-task.csv
+  source_kind: csv
+  row_match:
+    Model: xDAWN-LDA
+  field: Brier
+  expected: "0.062"
+  required_text: "**Brier 0.062**"
+  evidence_role: primary
+- claim_id: xdawn-selection-recall
+  source_path: artifacts/publication/paper-display-v1/tables/table-3-p300-original-task.csv
+  source_kind: csv
+  row_match:
+    Model: xDAWN-LDA
+  field: Target-event recall@k (95% CI)
+  expected: "0.355 [0.291, 0.423]"
+  required_text: "0.355 [95%\nCI 0.291, 0.423]"
+  evidence_role: primary
+- claim_id: eegnet-brier-contrast
+  source_path: artifacts/publication/paper-display-v1/tables/table-3b-p300-paired-contrasts.csv
+  source_kind: csv
+  row_match:
+    Metric: Brier (positive is worse)
+  field: EEGNet - xDAWN
+  expected: "+0.089"
+  required_text: "+0.089 [95% CI +0.084, +0.095]"
+  evidence_role: secondary
+- claim_id: eegnet-brier-contrast-ci
+  source_path: artifacts/publication/paper-display-v1/tables/table-3b-p300-paired-contrasts.csv
+  source_kind: csv
+  row_match:
+    Metric: Brier (positive is worse)
+  field: 95% CI
+  expected: "[+0.084, +0.095]"
+  required_text: "+0.089 [95% CI +0.084, +0.095]"
+  evidence_role: secondary
+- claim_id: replay-availability
+  source_path: artifacts/publication/paper-display-v1/tables/table-4-counterfactual-conditions.csv
+  source_kind: csv
+  row_match:
+    Condition: BCI only
+  field: Target available
+  expected: "0.271"
+  required_text: "Target availability in the balanced replay was **0.271 in every condition**"
+  evidence_role: primary
+- claim_id: replay-complete-top1
+  source_path: artifacts/publication/paper-display-v1/tables/table-4-counterfactual-conditions.csv
+  source_kind: csv
+  row_match:
+    Condition: Complete system
+  field: Top-1 recall
+  expected: "0.257"
+  required_text: "complete system achieved top-1 recall 0.257"
+  evidence_role: primary
+- claim_id: replay-top1-contrast
+  source_path: artifacts/publication/paper-display-v1/tables/table-4b-counterfactual-contrasts.csv
+  source_kind: csv
+  row_match:
+    Contrast: Complete system - BCI only
+    Metric: Top-1 recall
+  field: Difference
+  expected: "+0.007"
+  required_text: "+0.007 [95% CI +0.000, +0.028]"
+  evidence_role: primary
+- claim_id: replay-completion-contrast
+  source_path: artifacts/publication/paper-display-v1/tables/table-4b-counterfactual-contrasts.csv
+  source_kind: csv
+  row_match:
+    Contrast: Complete system - BCI only
+    Metric: Selection completion
+  field: Difference
+  expected: "+0.000"
+  required_text: "+0.000 [95% CI +0.000, +0.000]"
+  evidence_role: primary
+- claim_id: candidate-v2-availability
+  source_path: artifacts/publication/paper-display-v1/tables/table-5-candidate-generation.csv
+  source_kind: csv
+  row_match:
+    Dataset: Existing test-exposed
+    Method: Full v2
+  field: Span availability
+  expected: "0.525"
+  required_text: "to **0.525**"
+  evidence_role: exploratory
+- claim_id: candidate-v2-span-delta
+  source_path: artifacts/publication/paper-display-v1/tables/table-5b-candidate-contrasts.csv
+  source_kind: csv
+  row_match:
+    Dataset: Existing test-exposed
+    Contrast: "v2 - frozen v1, spans"
+  field: Difference
+  expected: "+0.238"
+  required_text: "+0.238 [95% CI +0.219, +0.257]"
+  evidence_role: exploratory
+- claim_id: candidate-v2-span-delta-ci
+  source_path: artifacts/publication/paper-display-v1/tables/table-5b-candidate-contrasts.csv
+  source_kind: csv
+  row_match:
+    Dataset: Existing test-exposed
+    Contrast: "v2 - frozen v1, spans"
+  field: 95% CI
+  expected: "[+0.219, +0.257]"
+  required_text: "+0.238 [95% CI +0.219, +0.257]"
+  evidence_role: exploratory
+- claim_id: two-stage-original-opening
+  source_path: artifacts/publication/paper-display-v1/tables/table-5-candidate-generation.csv
+  source_kind: csv
+  row_match:
+    Dataset: Existing test-exposed
+    Method: Two-stage opening
+  field: Opening availability
+  expected: "0.188"
+  required_text: "opening availability 0.188"
+  evidence_role: exploratory
+- claim_id: one-stage-combination-opening
+  source_path: artifacts/publication/paper-display-v1/tables/table-5-candidate-generation.csv
+  source_kind: csv
+  row_match:
+    Dataset: Held-out combinations
+    Method: Full v2
+  field: Opening availability
+  expected: "0.000"
+  required_text: "full v2 had **0.000 opening availability**"
+  evidence_role: exploratory
+- claim_id: two-stage-combination-opening
+  source_path: artifacts/publication/paper-display-v1/tables/table-5-candidate-generation.csv
+  source_kind: csv
+  row_match:
+    Dataset: Held-out combinations
+    Method: Two-stage opening
+  field: Opening availability
+  expected: "1.000"
+  required_text: "two-stage composition had\n**1.000 opening availability**"
+  evidence_role: exploratory
+- claim_id: hierarchical-one-stage
+  source_path: artifacts/publication/paper-display-v1/tables/table-6-opening-generalization.csv
+  source_kind: csv
+  row_match:
+    Challenge: Held-out stem/content combinations
+    Method: One-stage phrase
+  field: Availability
+  expected: "0.000"
+  required_text: "one-stage phrase retrieval had **0.000 availability**"
+  evidence_role: exploratory
+- claim_id: hierarchical-two-stage
+  source_path: artifacts/publication/paper-display-v1/tables/table-6-opening-generalization.csv
+  source_kind: csv
+  row_match:
+    Challenge: Held-out stem/content combinations
+    Method: Two-stage stem/content
+  field: Availability
+  expected: "0.250"
+  required_text: "two-stage stem/content composition reached **0.250**"
+  evidence_role: exploratory
+- claim_id: hierarchical-three-stage
+  source_path: artifacts/publication/paper-display-v1/tables/table-6-opening-generalization.csv
+  source_kind: csv
+  row_match:
+    Challenge: Held-out stem/content combinations
+    Method: Three-stage intent/stem/content
+  field: Availability
+  expected: "0.667"
+  required_text: "three-stage intent/stem/content\ncomposition reached **0.667**"
+  evidence_role: exploratory
+- claim_id: hierarchical-unseen-family
+  source_path: artifacts/publication/paper-display-v1/tables/table-6-opening-generalization.csv
+  source_kind: csv
+  row_match:
+    Challenge: Unseen paraphrase family
+    Method: Three-stage intent/stem/content
+  field: Availability
+  expected: "0.000"
+  required_text: "all three methods had\n0.000 availability"
+  evidence_role: exploratory

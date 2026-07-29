@@ -24,6 +24,7 @@ dependencies = [
   "mne>=1.9,<2",
   "numpy>=2,<3",
   "pydantic>=2.11,<3",
+  "python-docx>=1.2,<2",
   "pyyaml>=6.0.2,<7",
   "scikit-learn>=1.6,<2",
   "torch>=2.7,<3",
@@ -81,7 +82,17 @@ strict = true
 packages = ["neuroselect"]
 
 [[tool.mypy.overrides]]
-module = ["joblib", "mne", "mne.*", "scipy", "scipy.*", "sklearn", "sklearn.*"]
+module = [
+  "docx",
+  "docx.*",
+  "joblib",
+  "mne",
+  "mne.*",
+  "scipy",
+  "scipy.*",
+  "sklearn",
+  "sklearn.*",
+]
 ignore_missing_imports = true
 
 [tool.ruff]

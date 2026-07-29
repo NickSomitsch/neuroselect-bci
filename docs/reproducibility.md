@@ -182,3 +182,33 @@ The final command rejects a dirty worktree. During implementation only,
 `PUBLICATION_DISPLAY_ARGS="--overwrite --allow-dirty"` permits visual QA while leaving
 `publication_ready: false` in the generated inventory. Commit the implementation and rerun without
 that flag before inserting the figures or tables into a manuscript.
+
+## Manuscript drafting and assembly
+
+The journal-neutral Markdown, synchronized LaTeX/BibTeX sources, references, and quantitative claim
+ledger are tracked under `paper/`. Tectonic is required to compile the PDF. After generating the
+clean publication display, assemble every manuscript format with:
+
+```bash
+make manuscript MANUSCRIPT_ARGS="--overwrite"
+```
+
+The command verifies the publication-protocol digest, exact display-manifest digest, display
+configuration, every requested table and figure marker, all citation keys, all registered
+quantitative source values, and that the tracked LaTeX/BibTeX forms match their verified inputs. It
+writes DOCX, LaTeX, BibTeX, a compiled PDF, a citation-numbered Markdown rendering, the exact PDF
+figures, a claim audit, an inventory, and a checksum manifest to
+`artifacts/publication/manuscript-v1/`.
+
+After changing manuscript inputs, refresh the committed LaTeX files during development:
+
+```bash
+make manuscript-latex-sync MANUSCRIPT_ARGS="--overwrite --allow-dirty"
+```
+
+Final assembly rejects a dirty worktree. For implementation-time page rendering only, use
+`MANUSCRIPT_ARGS="--overwrite --allow-dirty"`; the resulting inventory records
+`assembly_ready: false`. Commit the manuscript implementation and rerun without the development
+flag before external review. The final command fails if the committed LaTeX source is stale or the
+PDF does not compile. `submission_ready` remains false until every external protocol gate is
+satisfied.

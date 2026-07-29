@@ -1,0 +1,84 @@
+- reference_id: wolpaw2002
+  formatted: >-
+    Wolpaw JR, Birbaumer N, McFarland DJ, Pfurtscheller G, Vaughan TM.
+    Brain-computer interfaces for communication and control. Clinical Neurophysiology.
+    2002;113(6):767-791. doi:10.1016/S1388-2457(02)00057-3.
+  persistent_url: https://doi.org/10.1016/S1388-2457(02)00057-3
+- reference_id: farwell1988
+  formatted: >-
+    Farwell LA, Donchin E. Talking off the top of your head: toward a mental prosthesis
+    utilizing event-related brain potentials. Electroencephalography and Clinical
+    Neurophysiology. 1988;70(6):510-523. doi:10.1016/0013-4694(88)90149-6.
+  persistent_url: https://doi.org/10.1016/0013-4694(88)90149-6
+- reference_id: rezeika2018
+  formatted: >-
+    Rezeika A, Benda M, Stawicki P, Gembler F, Saboor A, Volosyak I. Brain-computer
+    interface spellers: a review. Brain Sciences. 2018;8(4):57.
+    doi:10.3390/brainsci8040057.
+  persistent_url: https://doi.org/10.3390/brainsci8040057
+- reference_id: speier2012
+  formatted: >-
+    Speier W, Arnold CW, Lu J, Taira RK, Pouratian N. Natural language processing with
+    dynamic classification improves P300 speller accuracy and bit rate. Journal of
+    Neural Engineering. 2012;9(1):016004. doi:10.1088/1741-2560/9/1/016004.
+  persistent_url: https://doi.org/10.1088/1741-2560/9/1/016004
+- reference_id: pan2022
+  formatted: >-
+    Pan J, Chen X, Ban N, He J, Chen J, Huang H. Advances in P300 brain-computer
+    interface spellers: toward paradigm design and performance evaluation. Frontiers
+    in Human Neuroscience. 2022;16:1077717. doi:10.3389/fnhum.2022.1077717.
+  persistent_url: https://doi.org/10.3389/fnhum.2022.1077717
+- reference_id: mainsah2025
+  formatted: >-
+    Mainsah B, Fleeting C, Balmat T, Sellers E, Collins L. bigP3BCI: An Open, Diverse
+    and Machine Learning Ready P300-based Brain-Computer Interface Dataset. PhysioNet.
+    2025; version 1.0.0. doi:10.13026/0byy-ry86.
+  persistent_url: https://doi.org/10.13026/0byy-ry86
+- reference_id: rivet2009
+  formatted: >-
+    Rivet B, Souloumiac A, Attina V, Gibert G. xDAWN algorithm to enhance evoked
+    potentials: application to brain-computer interface. IEEE Transactions on
+    Biomedical Engineering. 2009;56(8):2035-2043. doi:10.1109/TBME.2009.2012869.
+  persistent_url: https://doi.org/10.1109/TBME.2009.2012869
+- reference_id: lawhern2018
+  formatted: >-
+    Lawhern VJ, Solon AJ, Waytowich NR, Gordon SM, Hung CP, Lance BJ. EEGNet: a compact
+    convolutional neural network for EEG-based brain-computer interfaces. Journal of
+    Neural Engineering. 2018;15(5):056013. doi:10.1088/1741-2552/aace8c.
+  persistent_url: https://doi.org/10.1088/1741-2552/aace8c
+- reference_id: gramfort2013
+  formatted: >-
+    Gramfort A, Luessi M, Larson E, et al. MEG and EEG data analysis with MNE-Python.
+    Frontiers in Neuroscience. 2013;7:267. doi:10.3389/fnins.2013.00267.
+  persistent_url: https://doi.org/10.3389/fnins.2013.00267
+- reference_id: guo2017
+  formatted: >-
+    Guo C, Pleiss G, Sun Y, Weinberger KQ. On calibration of modern neural networks.
+    Proceedings of the 34th International Conference on Machine Learning.
+    2017;70:1321-1330.
+  persistent_url: https://proceedings.mlr.press/v70/guo17a.html
+- reference_id: qwen32025
+  formatted: >-
+    Yang A, Li A, Yang B, et al. Qwen3 Technical Report. arXiv:2505.09388. 2025.
+  persistent_url: https://arxiv.org/abs/2505.09388
+- reference_id: hu2022
+  formatted: >-
+    Hu EJ, Shen Y, Wallis P, et al. LoRA: Low-Rank Adaptation of Large Language Models.
+    International Conference on Learning Representations. 2022.
+  persistent_url: https://openreview.net/forum?id=nZeVKeeFYf9
+- reference_id: lewis2020
+  formatted: >-
+    Lewis P, Perez E, Piktus A, et al. Retrieval-Augmented Generation for
+    Knowledge-Intensive NLP Tasks. Advances in Neural Information Processing Systems.
+    2020;33:9459-9474.
+  persistent_url: https://proceedings.neurips.cc/paper/2020/hash/6b493230205f780e1bc26945df7481e5-Abstract.html
+- reference_id: pedregosa2011
+  formatted: >-
+    Pedregosa F, Varoquaux G, Gramfort A, et al. Scikit-learn: machine learning in
+    Python. Journal of Machine Learning Research. 2011;12:2825-2830.
+  persistent_url: https://www.jmlr.org/papers/v12/pedregosa11a.html
+- reference_id: hannun2023
+  formatted: >-
+    Hannun A, Digani J, Katharopoulos A, Collobert R. MLX: Efficient and flexible
+    machine learning on Apple silicon. Software. 2023.
+  persistent_url: https://github.com/ml-explore/mlx

@@ -94,3 +94,18 @@ Submission additionally requires:
 Nick Somitsch remains the sole author by default. A supervisor is added as an author only after a
 qualifying intellectual contribution and acceptance of responsibility for the paper; otherwise
 the contribution is acknowledged.
+
+## Manuscript state and next step
+
+The journal-neutral manuscript is maintained in `paper/manuscript.md`, synchronized to the
+journal-editable LaTeX and BibTeX files under `paper/latex/`, and reproducibly assembled with
+`make manuscript`. Its claim ledger verifies the principal quantitative phrases against the
+publication display and tracked method configurations. The same assembly produces DOCX, Markdown,
+a self-contained LaTeX bundle, and a Tectonic-compiled PDF.
+
+The next step is independent scientific review followed by venue-specific submission assembly.
+This is not an evidence-generating step: frozen primary and exploratory outcomes remain unchanged.
+The review should focus on BCI terminology, statistical interpretation, counterfactual boundaries,
+and whether the contribution is stated at an appropriate strength. Journal adaptation starts only
+after the institutional, open-access, reviewer, and author-metadata items in
+`paper/submission-checklist.md` are resolved.

@@ -1,0 +1,39 @@
+schema_version: "1.0"
+manuscript_id: neuroselect-offline-journal-manuscript-v1
+manuscript_revision: journal-manuscript-v1
+assembled_at: 2026-07-29T14:00:00+02:00
+title: "NeuroSelect: A Reproducible Offline Framework for Personalized Language Ranking and P300 Candidate Fusion"
+article_type: Original Research
+author: Nick Somitsch
+source_markdown: paper/manuscript.md
+references: paper/references.yaml
+latex_source: paper/latex/neuroselect-offline-journal-manuscript.tex
+latex_bibliography: paper/latex/references.bib
+claim_ledger: paper/manuscript-claim-ledger.yaml
+publication_protocol: configs/publication/offline_methods_v1.yaml
+expected_protocol_sha256: 3beb95cc8dcf3a602e1671c8e7fe26adc615308c6523232a6d5a19728a900b5a
+display:
+  path: artifacts/publication/paper-display-v1
+  expected_manifest_sha256: b330a336b83585bd2436b23de001710f29d85e480ae38dd73b2d270e6f656c2b
+  expected_config_sha256: 44a5b69a1452671657d8590dc49b1dedded4202f76b8c7669ee001fe20d82488
+  require_publication_ready: true
+included_tables:
+  - table-1-evidence-hierarchy
+  - table-2-language-primary
+  - table-3-p300-original-task
+  - table-3b-p300-paired-contrasts
+  - table-4-counterfactual-conditions
+  - table-4b-counterfactual-contrasts
+  - table-5-candidate-generation
+  - table-5b-candidate-contrasts
+  - table-6-opening-generalization
+  - table-6b-opening-contrasts
+included_figures:
+  - figure-1-language-bottleneck
+  - figure-2-p300-comparison
+  - figure-3-counterfactual-fusion
+  - figure-4-candidate-generation
+  - figure-5-opening-generalization
+style_revision: narrative-proposal-journal-manuscript-v1
+output_filename: neuroselect-offline-journal-manuscript.docx
+outcome_based_omission_forbidden: true

@@ -526,6 +526,35 @@ evidence remain visibly labeled and are never pooled into a single score. The co
 dirty worktree for the final bundle; `--allow-dirty` exists only for implementation-time visual
 validation.
 
+Assemble the journal-neutral manuscript after the clean display exists:
+
+```bash
+make manuscript MANUSCRIPT_ARGS="--overwrite"
+```
+
+The assembler verifies the exact display manifest, all ten table and five figure markers, fifteen
+references, and the quantitative claim ledger before writing synchronized DOCX, LaTeX, BibTeX,
+compiled PDF, and rendered Markdown forms under `artifacts/publication/manuscript-v1/`. The LaTeX
+bundle is self-contained and includes the five exact PDF figures. Tectonic is required for the
+compiled PDF (`brew install tectonic` on macOS).
+
+The journal-editable source and bibliography are tracked under `paper/latex/`. After changing the
+canonical Markdown, references, tables, or figures, synchronize them during development with:
+
+```bash
+make manuscript-latex-sync MANUSCRIPT_ARGS="--overwrite --allow-dirty"
+```
+
+The ordinary `manuscript` target fails if those tracked LaTeX files are stale. `assembly_ready`
+means that all document formats and their inputs came from clean verified source; it does not mean
+`submission_ready`. During implementation, `--allow-dirty` permits visual QA while keeping
+assembly readiness false.
+
+The next paper step is independent scientific review and journal-specific submission preparation.
+Use the [submission checklist](paper/submission-checklist.md) to obtain BCI review, institutional
+secondary-use wording, open-access confirmation, and final author metadata before adapting the
+journal-neutral LaTeX source to a venue template.
+
 ## Research boundaries
 
 The first real-data integration uses offline P300 replay. Recorded target evidence may be mapped
@@ -533,7 +562,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md), [exploratory candidate-generation ADR](docs/adr/0027-exploratory-target-blind-candidate-generation-v2.md), [opening-robustness ADR](docs/adr/0028-candidate-generation-ablation-and-opening-robustness.md), [hierarchical-opening ADR](docs/adr/0029-hierarchical-opening-generalization.md), and [publication-display ADR](docs/adr/0030-publication-tables-and-figures.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md), [exploratory candidate-generation ADR](docs/adr/0027-exploratory-target-blind-candidate-generation-v2.md), [opening-robustness ADR](docs/adr/0028-candidate-generation-ablation-and-opening-robustness.md), [hierarchical-opening ADR](docs/adr/0029-hierarchical-opening-generalization.md), [publication-display ADR](docs/adr/0030-publication-tables-and-figures.md), and [manuscript-assembly ADR](docs/adr/0031-verifiable-manuscript-assembly.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 
