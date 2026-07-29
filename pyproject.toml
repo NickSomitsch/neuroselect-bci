@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
   "fastapi>=0.115,<1",
   "joblib>=1.4,<2",
+  "matplotlib>=3.10,<4",
   "mne>=1.9,<2",
   "numpy>=2,<3",
   "pydantic>=2.11,<3",

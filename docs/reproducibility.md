@@ -164,3 +164,21 @@ isolation, absent-family stems, target-blind generator APIs, and every output ch
 candidate bank traverses only train and validation records. As with Step 4, commit the
 implementation and rerun once before pinning the artifact in publication tables so the final
 manifest records clean source provenance.
+
+## Publication tables and figures
+
+After all four display sources have clean manifests, render the manuscript bundle with:
+
+```bash
+make publication-display PUBLICATION_DISPLAY_ARGS="--overwrite"
+```
+
+The locked display recipe checks the publication-protocol digest and every source-manifest digest,
+then transforms existing estimates without model execution or new statistical inference. Tables
+are written as both CSV and Markdown. Each figure is written as vector SVG and PDF plus a 300-dpi
+PNG, with a shared caption inventory and per-file SHA-256 checksums.
+
+The final command rejects a dirty worktree. During implementation only,
+`PUBLICATION_DISPLAY_ARGS="--overwrite --allow-dirty"` permits visual QA while leaving
+`publication_ready: false` in the generated inventory. Commit the implementation and rerun without
+that flag before inserting the figures or tables into a manuscript.

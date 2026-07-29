@@ -511,6 +511,21 @@ composition share a maximum menu size of nine. Outputs include exact coverage, p
 menus reached, candidate exposures, and coverage per required selection under
 `artifacts/publication/opening-generalization-v1/`.
 
+Build the checksum-pinned manuscript tables and figures with:
+
+```bash
+make publication-display PUBLICATION_DISPLAY_ARGS="--overwrite"
+```
+
+The display recipe verifies the clean primary analysis, candidate-generation v2, Step 4, and
+opening-generalization manifests before reading any estimate. It emits ten CSV/Markdown tables,
+five figures in SVG, 300-dpi PNG, and PDF, a caption sheet, an inventory, and a manifest under
+`artifacts/publication/paper-display-v1/`. Primary language, primary original-task EEG, the
+secondary EEGNet comparator, primary counterfactual replay, and exploratory candidate-generation
+evidence remain visibly labeled and are never pooled into a single score. The command fails on a
+dirty worktree for the final bundle; `--allow-dirty` exists only for implementation-time visual
+validation.
+
 ## Research boundaries
 
 The first real-data integration uses offline P300 replay. Recorded target evidence may be mapped
@@ -518,7 +533,7 @@ to visible candidate tiles for counterfactual system evaluation, but the resulti
 selected live by the original participants. Original-task decoder results, counterfactual replay
 results, and controlled simulation results must always be reported separately.
 
-Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md), [exploratory candidate-generation ADR](docs/adr/0027-exploratory-target-blind-candidate-generation-v2.md), [opening-robustness ADR](docs/adr/0028-candidate-generation-ablation-and-opening-robustness.md), and [hierarchical-opening ADR](docs/adr/0029-hierarchical-opening-generalization.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
+Before contributing claims or experiment code, review the [research-scope ADR](docs/adr/0001-research-scope-and-claims.md), [Study P dataset card](docs/dataset-card.md), [P300 model card](docs/model-card.md), [counterfactual-fusion ADR](docs/adr/0014-counterfactual-fusion-evaluation.md), [input-preparation ADR](docs/adr/0019-language-p300-counterfactual-input-preparation.md), [balanced-sampling ADR](docs/adr/0023-balanced-counterfactual-research-sampling.md), [full Study P evidence ADR](docs/adr/0024-full-study-p-research-evidence.md), [research-release ADR](docs/adr/0015-research-release-and-reporting.md), [final evidence-synthesis ADR](docs/adr/0025-final-research-evidence-synthesis.md), [offline-publication ADR](docs/adr/0026-offline-journal-publication-strategy.md), [exploratory candidate-generation ADR](docs/adr/0027-exploratory-target-blind-candidate-generation-v2.md), [opening-robustness ADR](docs/adr/0028-candidate-generation-ablation-and-opening-robustness.md), [hierarchical-opening ADR](docs/adr/0029-hierarchical-opening-generalization.md), and [publication-display ADR](docs/adr/0030-publication-tables-and-figures.md). Public-use boundaries are documented in the [privacy statement](docs/privacy.md), [limitations](docs/limitations.md), [responsible-use guidance](docs/responsible-use.md), [threat model](docs/threat-model.md), and [security policy](SECURITY.md). The remaining accepted decisions are indexed in [`docs/adr/`](docs/adr/).
 
 ## License
 

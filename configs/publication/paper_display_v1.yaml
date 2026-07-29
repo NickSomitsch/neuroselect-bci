@@ -1,0 +1,28 @@
+schema_version: "1.0"
+display_id: neuroselect-offline-paper-display-v1
+display_revision: paper-display-v1
+generated_at: 2026-07-29T10:00:00+02:00
+publication_protocol: configs/publication/offline_methods_v1.yaml
+expected_protocol_sha256: 3beb95cc8dcf3a602e1671c8e7fe26adc615308c6523232a6d5a19728a900b5a
+sources:
+  - source_id: primary-analysis
+    path: artifacts/publication/offline-methods-v1
+    expected_manifest_sha256: 41178515d71edf1c90c6e82fad68e9ee1707d32baee3d63e74d9033e3e3dcafc
+    evidence_role: primary_synthesis
+  - source_id: candidate-generation-v2
+    path: artifacts/publication/candidate-generation-v2-exploratory-v1
+    expected_manifest_sha256: 19db319a0871a9c7d73c38d902a402c48cef3537e65be4089efe30ba2714de2b
+    evidence_role: exploratory_test_exposed
+  - source_id: candidate-generation-step4
+    path: artifacts/publication/candidate-generation-step4-v1
+    expected_manifest_sha256: ec401079ce88d4a7d275e9bb5b519a5fcf95f06dbb80f48ea4e490cdd120b1e6
+    evidence_role: exploratory_locked
+  - source_id: opening-generalization
+    path: artifacts/publication/opening-generalization-v1
+    expected_manifest_sha256: cab79edd52a29266724840d227b7d8086bebcdbadcaa23bf14f317fbd4eb21b6
+    evidence_role: exploratory_locked
+figure_formats: [svg, png, pdf]
+raster_dpi: 300
+style_revision: neuroselect-publication-style-v1
+evidence_separation_policy: primary_secondary_and_exploratory_results_are_never_pooled
+outcome_based_omission_forbidden: true
