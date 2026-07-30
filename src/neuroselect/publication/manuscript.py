@@ -97,6 +97,25 @@ class ManuscriptReference(BaseModel):
     reference_id: str = Field(pattern=r"^[a-z0-9-]+$")
     formatted: str = Field(min_length=1)
     persistent_url: str = Field(pattern=r"^https://")
+    bibtex_type: Literal["article", "inproceedings", "misc"] = "misc"
+    bibtex_fields: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_bibtex(self) -> ManuscriptReference:
+        if self.bibtex_fields:
+            required = {"title", "year"}
+            if self.bibtex_type in {"article", "inproceedings"}:
+                required.add("author")
+            missing = required - set(self.bibtex_fields)
+            if missing:
+                raise ValueError(
+                    f"structured BibTeX reference is missing fields: {sorted(missing)}"
+                )
+            if any(not key or not value.strip() for key, value in self.bibtex_fields.items()):
+                raise ValueError("structured BibTeX fields must be non-empty")
+        elif self.bibtex_type != "misc":
+            raise ValueError("non-misc references require structured BibTeX fields")
+        return self
 
 
 class ManuscriptClaim(BaseModel):

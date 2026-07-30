@@ -35,9 +35,9 @@ components but **0.0%** of openings from unseen paraphrase families.
 
 **Conclusions:** NeuroSelect provides a checksum-addressed way to study language-assisted P300
 candidate selection without merging unlike evidence tiers. The experiments identify candidate
-coverage, especially message openings and unseen surface families, as the dominant current
-bottleneck. They do not demonstrate live communication benefit, clinical efficacy, or
-open-vocabulary thought decoding.
+coverage, especially message openings and unseen surface families, as the largest observed
+bottleneck in the evaluated pipeline. They do not demonstrate live communication benefit,
+clinical efficacy, or open-vocabulary thought decoding.
 
 **Keywords:** brain-computer interface; P300; language prediction; personalization; candidate
 generation; counterfactual replay; reproducible research.
@@ -54,6 +54,16 @@ explicit selections. Language information is consequently attractive because it 
 prior probability of plausible continuations or expose multiword candidates. Earlier offline P300
 work showed that integrating natural-language probabilities with dynamic classification can
 improve character-level accuracy and bit rate [@speier2012].
+
+Predictive-language integration has also been evaluated in online P300 spelling. A predictive-word
+interface reduced task-completion time but also reduced accuracy [@ryan2011], while a trigram
+language model incorporated into online dynamic stopping reduced the required data collection and
+increased communication rate under its tested protocol [@mainsah2014]. More recently, offline
+simulations have compared GPT-2, BERT, and BART language components for P300 spelling and reported
+model-dependent typing-speed estimates [@parthasarathy2024]. Those studies primarily addressed
+character or word prediction and communication-rate simulation. NeuroSelect instead isolates exact
+phrase-candidate coverage, conditional ranking, original-task EEG decoding, and counterfactual
+phrase-menu replay so that performance at one layer is not treated as evidence at another.
 
 Moving from character priors to generated phrase menus creates a different failure mode. Let an
 intended next span be \(y\), a target-blind generator produce a finite candidate set \(C(x)\) from
@@ -116,7 +126,9 @@ and a quantitative claim ledger before producing synchronized LaTeX, PDF, Word, 
 documents. The LaTeX source and BibTeX bibliography are tracked for journal submission, while the
 compiled bundle includes the exact publication figures. A dirty source tree can be used for
 development rendering only and is explicitly marked non-ready. Source code, tests, protocol,
-analysis recipes, and manuscript sources are maintained in the public NeuroSelect repository.
+analysis recipes, and manuscript sources are maintained in a version-controlled NeuroSelect
+repository and will be made public with the submission release. Non-restricted result manifests,
+tables, figures, and publication-analysis outputs will be archived with that release.
 
 ## 2.2 Synthetic messages and leakage boundaries
 
@@ -124,41 +136,56 @@ The language benchmark contains four fixed synthetic communication profiles: cas
 formal, and reflective. Each profile contributes 250 test messages; across profiles, the frozen
 test set contains **1,000 messages**. Each message is segmented into target next spans, producing
 **3,990 language trials**. Training, validation, and test messages are disjoint. Profile adapters
-use only the corresponding training corpus, validation supports model selection and early
-stopping, and the test messages are reserved for the reported held-out evaluation.
+were optimized only on the corresponding training corpus. Validation loss was monitored during
+the fixed training schedule, but it was not used for early stopping or best-checkpoint selection.
+Test loss was evaluated after training, and test messages were then used for the reported ranking
+benchmark; no test message contributed a training gradient. Because the adapter artifacts existed
+before the publication protocol was written, these results are retrospective rather than a
+prospectively sealed evaluation.
 
 Synthetic profiles are controlled style conditions, not people. They contain no private user data
 and do not establish population generalization. An intended target is used only after generation
 to compute availability and rank. Generator APIs do not accept the intended target, and artifact
 checks record this constraint.
 
+Primary next-span contexts were constructed by teacher forcing: after each target span, the next
+trial context included the preceding reference spans rather than the system's earlier generated or
+selected output. This isolates per-span candidate generation and ranking from cascading interface
+errors. Complete-message availability nevertheless required every target span in a message to be
+available.
+
 ## 2.3 Candidate generation and language scoring
 
-The frozen generator used Qwen/Qwen3-4B-MLX-4bit at an exact model revision. Qwen3 is a family of
-dense and mixture-of-experts language models with support for reasoning and non-reasoning modes
-[@qwen32025]. NeuroSelect disabled thinking, set temperature to zero, and limited each visible menu
-to nine language candidates. Structured output validation rejected invalid candidates without
-inserting the intended answer.
+The frozen generator used Qwen/Qwen3-4B-MLX-4bit at revision
+52a5ab34fa604bc8af6d3ce0cac0cab10b7eb495. Qwen3 is a family of dense and
+mixture-of-experts language models with support for reasoning and non-reasoning modes [@qwen32025].
+NeuroSelect disabled thinking, set temperature to zero, allowed at most 512 generated tokens, and
+limited each visible menu to nine language candidates; three separately scored control actions
+were handled outside that language-candidate budget. Structured-output validation rejected invalid
+candidates without inserting the intended answer.
 
 The generic language score is the candidate's mean token log likelihood under the base model. Four
 profile-specific LoRA adapters were trained independently and verified by checksums before
 evaluation. The personalized condition rescored the same fixed candidate set; it did not generate a
 new personalized set. This makes personalization a paired ranking comparison rather than a
-combined generation-and-ranking intervention. Training and inference used MLX on Apple silicon
-[@hannun2023].
+combined generation-and-ranking intervention. Each adapter used 16 adapted transformer layers, a
+batch size of one, a learning rate of \(10^{-5}\), 600 update iterations, a maximum sequence length
+of 512 tokens, gradient checkpointing, and seed 20260723. Validation loss was evaluated every 100
+iterations; the final scheduled adapter, rather than a validation-selected checkpoint, was used.
+Training and inference used MLX on Apple silicon [@hannun2023].
 
 For each trial, target availability equals one when the exact intended span occurs in the
 candidate set. Unconditional top-k recall counts unavailable targets as failures. Conditional
 top-k recall and reciprocal rank use only available targets. Complete-message availability equals
 one only when every target span in the message is available. Exact message accuracy additionally
-requires every available span to be ranked correctly.
+requires every target span to be available and ranked first.
 
 ## 2.4 Public EEG source and preprocessing
 
 Study P was drawn from bigP3BCI version 1.0.0 on PhysioNet, licensed CC BY 4.0
 [@mainsah2025]. The release contains **19 participants and 228 EDF+ spelling-block recordings**
 from two sessions, acquired with **32 EEG channels at 256 Hz**. The source task compared
-predictive and non-predictive 9-by-8 P300 spelling. NeuroSelect verified source files against the
+predictive and non-predictive 9-by-8 P300 spelling [@ryan2011]. NeuroSelect verified source files against the
 official SHA-256 inventory and retained subject, session, run, condition, flash, target label, and
 selection-trial provenance.
 
@@ -175,16 +202,23 @@ remained represented in the preprocessing report.
 
 ## 2.5 Original-task P300 decoders
 
-The primary decoder used xDAWN spatial filtering followed by shrinkage linear discriminant
-analysis. xDAWN was designed to enhance evoked responses in BCI data
-[@rivet2009]. Validation probabilities were used to fit a Platt-style calibration mapping, and the
-locked model was then evaluated on the three held-out participants.
+The prespecified primary decoder used two xDAWN spatial components with regularization 0.1,
+followed by linear discriminant analysis with automatic covariance shrinkage. xDAWN was designed
+to enhance evoked responses in BCI data [@rivet2009]. A logistic calibration model with
+regularization parameter \(C=1\) was fitted to the LDA decision scores from the three held-out
+validation participants. The locked calibrated model was then evaluated on the three held-out test
+participants; seed 20260719 fixed the recipe.
 
 EEGNet served as a secondary comparator. It is a compact convolutional architecture that uses
 depthwise and separable convolutions across several EEG paradigms [@lawhern2018]. It used the same
 participant split, preprocessing artifacts, labeled test epochs, and selection trials as the
 xDAWN-LDA analysis. Its purpose was to test whether a neural comparator changed the original-task
-conclusion, not to select the more favorable model after observing test performance.
+conclusion, not to select the more favorable model after observing test performance. The locked
+recipe used eight temporal filters, depth multiplier two, 16 pointwise filters, temporal kernels
+of 31 and 15 samples, pooling factors of four and four, dropout 0.25, batch size 64, AdamW with
+learning rate \(10^{-3}\) and weight decay \(10^{-4}\), and seed 20260720. Training ran for at most
+100 epochs with validation-loss early stopping after 12 non-improving epochs; the best validation
+state was restored. Held-validation logits were temperature-scaled before test evaluation.
 
 Epoch metrics were area under the receiver operating characteristic curve (AUROC), balanced
 accuracy, Brier score, and expected calibration error (ECE). Calibration was reported because a
@@ -204,10 +238,14 @@ candidate. It did not assert that the participant saw or intended the remapped p
 
 The six conditions were BCI only, generic language only, neural plus generic language, neural plus
 personalized language, neural plus personalized language and retrieval, and the complete system
-with safety policy. Fusion combined explicitly logged neural and language evidence. Local lexical
-retrieval added profile-relevant context without changing the underlying EEG. The safety policy
-could request a repeat instead of completing an uncertain or risky selection. Primary outcomes
-were top-1 recall, selection completion, and repeat requests.
+with safety policy. Here, “neural” denotes EEG-derived probabilities and does not imply that the
+primary decoder was a neural network. Fusion weights were 0.65 for EEG evidence, 0.15 for generic
+language, 0.08 for personalization, and 0.12 for retrieval, with a 0.35 risk penalty and a maximum
+0.08 diversity adjustment. Local lexical retrieval added profile-relevant context without changing
+the underlying EEG. The safety policy requested a repeat for low EEG support, a small EEG margin,
+or EEG-language conflict; it abstained when EEG evidence was missing or the fused score or margin
+was below threshold. Risk tags added a penalty and enhanced-confirmation flag rather than directly
+forcing a repeat. Primary outcomes were top-1 recall, selection completion, and repeat requests.
 
 ## 2.7 Exploratory candidate-generation experiments
 
@@ -238,7 +276,10 @@ complete messages were resampled within fixed profile strata. For EEG selection 
 participants were resampled first and selection trials second. Counterfactual paired contrasts
 were resampled at the held-out-participant and complete-message levels. Exploratory language
 contrasts resampled complete messages within profile strata. Every reported interval used
-**10,000 bootstrap resamples** and the protocol-fixed seeds. Intervals are descriptive and do not
+**10,000 bootstrap resamples**, percentile limits, and the protocol-fixed seeds. No multiplicity
+adjustment was applied. The intervals condition on the fitted checkpoints, fixed candidate
+generation realization, and evaluated samples; they do not include uncertainty from repeated
+adapter or EEGNet training or stochastic generation. Intervals are descriptive and do not
 establish clinical efficacy, population-level superiority, or non-inferiority.
 
 No synthetic-language, EEG, counterfactual, or exploratory observation was pooled into a single
@@ -358,8 +399,8 @@ First, the frozen target-blind generator made intended spans available in fewer 
 rounds and never covered an entire held-out message. Second, profile adapters improved average
 conditional ranking, but the effect was not uniform and the concise profile worsened on conditional
 top-1 recall. Third, the primary xDAWN-LDA decoder discriminated original-task target events with
-reasonable AUROC and comparatively good calibration, whereas EEGNet did not establish a paired
-selection-ranking advantage and had worse probability calibration. Fourth, counterfactual fusion
+an AUROC of 0.800 and lower Brier score and ECE than EEGNet, whereas EEGNet did not establish a
+paired selection-ranking advantage. Fourth, counterfactual fusion
 did not improve completion over BCI-only replay. Finally, exploratory hierarchy improved
 composition when every component had been observed, yet every tested method failed on unseen
 paraphrase families.
@@ -399,8 +440,8 @@ inference.
 The overall conditional ranking improvement supports the narrower statement that profile-specific
 adapters changed ordering on the frozen synthetic benchmark. It does not imply a universal
 personalization benefit. The concise profile's negative conditional top-1 effect is especially
-important because a system optimized only for the pooled mean could harm a subgroup-like style
-condition.
+important because a system optimized only for the pooled mean could reduce performance in a
+controlled style condition.
 
 Several mechanisms could produce this pattern. Concise messages provide shorter contexts and may
 leave fewer style cues for an adapter. The adapter may increase likelihood for generally concise
@@ -420,10 +461,12 @@ binary discrimination can translate into a much harder structured selection prob
 
 EEGNet's balanced accuracy was higher, but its paired selection-ranking intervals crossed zero and
 its probabilities were much less calibrated. A fusion system needs meaningful relative evidence,
-not merely a thresholded class decision. Calibration therefore influenced the model choice more
-directly than the small AUROC difference. Broader conclusions would require more held-out
-participants, repeated training seeds, and possibly nested cross-validation. The current test set
-contains three participants, so participant-level uncertainty remains substantial.
+not merely a thresholded class decision. xDAWN-LDA had been prespecified as the primary decoder;
+EEGNet was added later as a locked comparator rather than used for post-test model selection. Its
+calibration result therefore informs interpretation and future model choice, not the choice of the
+reported primary model. Broader conclusions would require more held-out participants, repeated
+training seeds, and possibly nested cross-validation. The current test set contains three
+participants, so participant-level uncertainty remains substantial.
 
 ## 4.5 What counterfactual replay establishes
 
@@ -457,32 +500,38 @@ review, or final author metadata.
 
 ## 4.7 Limitations
 
-The study has six main limitations. First, language profiles and messages are synthetic; exact-span
+The study has eight main limitations. First, language profiles and messages are synthetic; exact-span
 metrics can penalize semantically acceptable alternatives, while controlled language may
 underrepresent natural communication. Second, the primary language protocol is retrospective and
 the v2 benchmark was exposed during development. The later robustness experiments were locked
 before execution but remain developer-authored.
 
-Third, Study P measures an original predictive/non-predictive spelling task. Condition order is
-counterbalanced and can confound simple session-drift interpretations. Only three participants were
-held out for test, and the EEG results do not represent NeuroSelect phrase selection. Fourth,
-counterfactual replay preserves recorded evidence but changes the displayed interpretation; it is
-not a substitute for live data.
+Third, Study P measures an original predictive/non-predictive spelling task. Predictive and
+non-predictive condition order varies across the source design, so session differences cannot be
+attributed solely to time or electrode drift. Only three participants were held out for test, and
+the EEG results do not represent NeuroSelect phrase selection. Fourth, counterfactual replay
+preserves recorded evidence but changes the displayed interpretation; it is not a substitute for
+live data.
 
 Fifth, lexical retrieval and tracked safety tags are intentionally narrow. They do not constitute a
 semantic memory system, a general content-safety classifier, or a clinical safeguard. Sixth, the
 hierarchical opening experiments teacher-force simulated correct intermediate selections and
 report planned selection cost rather than measured interaction time, fatigue, visual load, or
-error correction.
+error correction. Seventh, each LoRA adapter and EEGNet were trained with one fixed seed, and
+generation was evaluated as one frozen realization. The bootstrap intervals therefore do not
+represent training- or generation-induced variability. Eighth, primary next-span evaluation
+teacher-forced the reference history, so it does not measure cascading errors during autonomous
+message construction.
 
 # 5. Conclusions
 
-NeuroSelect is a reproducible offline framework for studying personalized language ranking and
-P300 candidate fusion while preserving evidence boundaries. In the frozen evaluation, low target
-availability and zero complete-message availability dominated the language path. Personalization
-improved conditional ranking on average but harmed one profile-level top-1 outcome. The calibrated
-xDAWN-LDA decoder supplied usable original-task probability evidence, but neither a neural
-comparator nor counterfactual full fusion established a selection-completion advantage.
+NeuroSelect is a reproducible offline framework for studying profile-conditioned language ranking
+and counterfactual P300 candidate fusion while preserving evidence boundaries. In the frozen
+evaluation, low target availability and zero complete-message availability constrained the
+language path. Personalization improved conditional ranking on average but reduced one
+profile-level top-1 outcome. The prespecified calibrated xDAWN-LDA decoder achieved an original-task
+AUROC of 0.800. The secondary EEGNet comparator did not establish a selection-ranking advantage,
+and counterfactual full fusion did not establish a completion advantage over BCI-only replay.
 
 Exploratory compositional menus improved coverage for new combinations of observed parts and made
 message openings a tractable object of study. Their failure on every unseen paraphrase family
@@ -495,12 +544,13 @@ benefit.
 
 ## Data and code availability
 
-Source code, tracked protocols, synthetic benchmark sources, tests, and manuscript sources are
-available at https://github.com/NickSomitsch/neuroselect-bci under the MIT License. Study P is
-available separately from PhysioNet under CC BY 4.0 [@mainsah2025]. Raw EEG, cached base-model
-weights, trained adapters, and other license-controlled local artifacts are not redistributed in
-the source repository. Each reported run records source and output digests needed to verify local
-artifacts.
+Source code, tracked protocols, synthetic benchmark sources, tests, and manuscript sources will be
+released at https://github.com/NickSomitsch/neuroselect-bci under the MIT License before
+submission. Study P is available separately from PhysioNet under CC BY 4.0 [@mainsah2025]. Raw EEG,
+cached base-model weights, trained adapters, and other license-controlled local artifacts will not
+be redistributed in the source repository. Each reported run records source and output digests
+needed to verify local artifacts; non-restricted result manifests, tables, figures, and
+publication-analysis outputs will accompany the public release.
 
 ## Ethics statement
 

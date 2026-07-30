@@ -198,6 +198,26 @@ def render_bibliography(references: tuple[ManuscriptReference, ...]) -> str:
 
     entries = []
     for reference in references:
+        if reference.bibtex_fields:
+            fields = dict(reference.bibtex_fields)
+            fields.setdefault("url", reference.persistent_url)
+            field_lines = []
+            for key, value in fields.items():
+                rendered = value if key in {"url", "doi"} else _latex_escape(value)
+                if key == "title":
+                    field_lines.append("  title = {{" + rendered + "}},")
+                else:
+                    field_lines.append(f"  {key} = {{{rendered}}},")
+            entries.append(
+                "\n".join(
+                    (
+                        f"@{reference.bibtex_type}{{{reference.reference_id},",
+                        *field_lines,
+                        "}",
+                    )
+                )
+            )
+            continue
         note = _latex_escape(reference.formatted)
         entries.append(
             "\n".join(
@@ -243,9 +263,8 @@ def render_latex_manuscript(
 \setlength{{\parskip}}{{0.25em}}
 \setlength{{\emergencystretch}}{{3em}}
 \title{{{_latex_escape(spec.title)}}}
-\author{{{_latex_escape(spec.author)}\\
-\small Affiliation, institutional email, and ORCID to be confirmed}}
-\date{{{spec.assembled_at.date().isoformat()}}}
+\author{{{_latex_escape(spec.author)}}}
+\date{{}}
 
 \begin{{document}}
 \maketitle

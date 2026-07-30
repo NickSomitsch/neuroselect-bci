@@ -10,9 +10,9 @@
 - claim_id: message-count
   source_path: artifacts/evaluation/held-out-language-personalization-research-v1/result.json
   source_kind: json
-  field: metrics
+  field: adapters
   transform: length
-  expected: 5
+  expected: 4
   required_text: "four fixed synthetic communication profiles"
   evidence_role: method
 - claim_id: qwen-model
@@ -27,7 +27,70 @@
   source_kind: yaml
   field: language_candidate_count
   expected: 9
-  required_text: "limited each visible menu\nto nine language candidates"
+  required_text: "nine language candidates"
+  evidence_role: method
+- claim_id: qwen-revision
+  source_path: configs/models/qwen3_4b_mlx.yaml
+  source_kind: yaml
+  field: model_revision
+  expected: 52a5ab34fa604bc8af6d3ce0cac0cab10b7eb495
+  required_text: "52a5ab34fa604bc8af6d3ce0cac0cab10b7eb495"
+  evidence_role: method
+- claim_id: qwen-maximum-new-tokens
+  source_path: configs/models/qwen3_4b_mlx.yaml
+  source_kind: yaml
+  field: generation.maximum_new_tokens
+  expected: 512
+  required_text: "at most 512 generated tokens"
+  evidence_role: method
+- claim_id: lora-layers
+  source_path: configs/models/qwen3_4b_lora.yaml
+  source_kind: yaml
+  field: num_layers
+  expected: 16
+  required_text: "16 adapted transformer layers"
+  evidence_role: method
+- claim_id: lora-iterations
+  source_path: configs/models/qwen3_4b_lora.yaml
+  source_kind: yaml
+  field: iterations
+  expected: 600
+  required_text: "600 update iterations"
+  evidence_role: method
+- claim_id: lora-seed
+  source_path: configs/models/qwen3_4b_lora.yaml
+  source_kind: yaml
+  field: seed
+  expected: 20260723
+  required_text: "seed 20260723"
+  evidence_role: method
+- claim_id: xdawn-components
+  source_path: configs/decoding/xdawn_lda.yaml
+  source_kind: yaml
+  field: xdawn_components
+  expected: 2
+  required_text: "two xDAWN spatial components"
+  evidence_role: method
+- claim_id: xdawn-seed
+  source_path: configs/decoding/xdawn_lda.yaml
+  source_kind: yaml
+  field: random_seed
+  expected: 20260719
+  required_text: "seed 20260719"
+  evidence_role: method
+- claim_id: eegnet-seed
+  source_path: configs/decoding/eegnet_research.yaml
+  source_kind: yaml
+  field: random_seed
+  expected: 20260720
+  required_text: "seed 20260720"
+  evidence_role: method
+- claim_id: fusion-neural-weight
+  source_path: configs/ranking/default.yaml
+  source_kind: yaml
+  field: weights.neural
+  expected: 0.65
+  required_text: "0.65 for EEG evidence"
   evidence_role: method
 - claim_id: study-p-subjects
   source_path: configs/datasets/bigp3bci_study_p.yaml

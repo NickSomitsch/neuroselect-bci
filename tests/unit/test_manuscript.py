@@ -191,14 +191,17 @@ def test_tracked_manuscript_recipe_is_complete_without_generated_artifacts() -> 
     ordered_references = citation_order(source, references)
 
     assert source.startswith("# Abstract")
-    assert len(ordered_references) == 15
-    assert len(claims) == 40
+    assert len(ordered_references) == 18
+    assert len(claims) == 49
     assert len(spec.included_tables) == 10
     assert len(spec.included_figures) == 5
     assert all(claim.required_text in source for claim in claims)
     assert spec.latex_source.read_text(encoding="utf-8").startswith(r"\documentclass")
     bibliography = spec.latex_bibliography.read_text(encoding="utf-8")
-    assert all(f"@misc{{{reference.reference_id}," in bibliography for reference in references)
+    assert all(
+        f"@{reference.bibtex_type}{{{reference.reference_id}," in bibliography
+        for reference in references
+    )
 
 
 def test_citations_are_ordered_replaced_and_fail_closed(tmp_path: Path) -> None:
@@ -223,6 +226,52 @@ def test_citations_are_ordered_replaced_and_fail_closed(tmp_path: Path) -> None:
         citation_order("Only [@alpha].", references)
     with pytest.raises(ValueError, match="must contain citations"):
         citation_order("No citation.", ())
+
+
+def test_structured_bibtex_is_rendered_and_validated(tmp_path: Path) -> None:
+    path = tmp_path / "references.yaml"
+    path.write_text(
+        "- reference_id: article\n"
+        "  formatted: Test A. Structured article. 2026.\n"
+        "  persistent_url: https://example.org/article\n"
+        "  bibtex_type: article\n"
+        "  bibtex_fields:\n"
+        "    author: Test, Alice\n"
+        "    title: Structured article\n"
+        '    year: "2026"\n'
+        "    journal: Test Journal\n",
+        encoding="utf-8",
+    )
+    references = load_references(path)
+    bibliography = render_bibliography(references)
+    assert "@article{article," in bibliography
+    assert "author = {Test, Alice}," in bibliography
+    assert "title = {{Structured article}}," in bibliography
+    assert "url = {https://example.org/article}," in bibliography
+    assert "note =" not in bibliography
+
+    path.write_text(
+        "- reference_id: invalid\n"
+        "  formatted: Invalid structured article.\n"
+        "  persistent_url: https://example.org/invalid\n"
+        "  bibtex_type: article\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="require structured BibTeX fields"):
+        load_references(path)
+
+    path.write_text(
+        "- reference_id: incomplete\n"
+        "  formatted: Incomplete structured article.\n"
+        "  persistent_url: https://example.org/incomplete\n"
+        "  bibtex_type: article\n"
+        "  bibtex_fields:\n"
+        "    title: Incomplete\n"
+        '    year: "2026"\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="missing fields"):
+        load_references(path)
 
 
 def test_claim_audit_supports_csv_yaml_json_and_detects_failures(tmp_path: Path) -> None:
@@ -404,6 +453,8 @@ def test_latex_render_contains_citations_tables_figures_and_bibliography(
     assert set(package.figures) == {"figures/figure-1-test.pdf"}
     assert package.bibliography == render_bibliography(references)
     assert "@misc{test-ref," in package.bibliography
+    assert "Affiliation, institutional email, and ORCID to be confirmed" not in package.source
+    assert r"\date{}" in package.source
 
 
 def test_latex_inline_and_structural_variants(

@@ -2,7 +2,7 @@ schema_version: "1.0"
 manuscript_id: neuroselect-offline-journal-manuscript-v1
 manuscript_revision: journal-manuscript-v1
 assembled_at: 2026-07-29T14:00:00+02:00
-title: "NeuroSelect: A Reproducible Offline Framework for Personalized Language Ranking and P300 Candidate Fusion"
+title: "NeuroSelect: A Reproducible Offline Framework for Profile-Conditioned Language Ranking and Counterfactual P300 Candidate Fusion"
 article_type: Original Research
 author: Nick Somitsch
 source_markdown: paper/manuscript.md
