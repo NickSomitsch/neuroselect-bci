@@ -1,13 +1,19 @@
 .DS_Store
 .coverage
+.hypothesis/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
 .venv/
+.direnv/
+.idea/
+.vscode/
 __pycache__/
 *.egg-info/
+*.log
 dist/
 htmlcov/
+/tmp/
 
 # Local research artifacts and downloaded data/models.
 /artifacts/
@@ -22,7 +28,30 @@ ui/node_modules/
 ui/dist/
 ui/coverage/
 
-# Environment overrides and secrets.
+# Environment overrides, credentials, local databases, and model/data payloads.
 .env
 .env.*
 !.env.example
+.envrc
+*.ckpt
+*.db
+*.edf
+*.fif
+*.joblib
+*.key
+*.npy
+*.npz
+*.onnx
+*.p12
+*.pem
+*.pfx
+*.pickle
+*.pkl
+*.pt
+*.pth
+*.safetensors
+*.sqlite
+*.sqlite3
+
+# Notebook/editor residue.
+.ipynb_checkpoints/

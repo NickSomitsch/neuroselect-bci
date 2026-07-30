@@ -4,12 +4,15 @@ NeuroSelect welcomes reproducibility, accessibility, safety, documentation, and 
 improvements. Contributions must preserve the boundary between neural evidence, language-model
 support, personalization, retrieval, and explicit user confirmation.
 
+By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ## Development setup
 
 Install Python 3.12, `uv`, Node.js 22, and `pnpm` 10, then run:
 
 ```bash
 make setup
+make public-release-check
 make verify
 make release-check
 ```

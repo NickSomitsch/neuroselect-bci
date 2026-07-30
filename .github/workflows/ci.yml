@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
         with:
           version: "0.9.26"
@@ -23,6 +25,7 @@ jobs:
       - run: uv run ruff check src tests scripts
       - run: uv run mypy src tests scripts
       - run: uv run pytest
+      - run: uv run python scripts/check_public_repository.py
       - run: uv run python scripts/check_release.py
       - run: uv build
 

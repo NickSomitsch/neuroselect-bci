@@ -17,7 +17,12 @@ REQUIRED_FILES = (
     "LICENSE",
     "CITATION.cff",
     "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
     "SECURITY.md",
+    ".gitattributes",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
     "docs/dataset-card.md",
     "docs/model-card.md",
     "docs/privacy.md",
@@ -25,6 +30,7 @@ REQUIRED_FILES = (
     "docs/responsible-use.md",
     "docs/threat-model.md",
     "docs/reproducibility.md",
+    "docs/public-repository.md",
 )
 FORBIDDEN_CLAIM_PATTERNS = (
     r"\breads? (?:the )?user'?s? thoughts?\b",

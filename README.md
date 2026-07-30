@@ -1,13 +1,18 @@
 # NeuroSelect
 
+[![CI](https://github.com/NickSomitsch/neuroselect-bci/actions/workflows/ci.yml/badge.svg)](https://github.com/NickSomitsch/neuroselect-bci/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB.svg)](https://www.python.org/)
+
 NeuroSelect is a research project for reducing the number of non-invasive BCI selections needed to compose a message through safe, personalized language prediction.
 
 It is not a mind-reading system, an open-vocabulary EEG decoder, a medical device, or a diagnostic tool. Language-model suggestions are kept separate from neural evidence, and a message cannot be finalized without explicit confirmation.
 
 ## Current status
 
-The repository currently contains the implementation foundation and the first public
-synthetic evaluation assets:
+The repository contains the complete offline research implementation, reproducibility controls,
+and journal-neutral manuscript sources. It does not include restricted datasets, model weights,
+trained adapters, or local result bundles:
 
 - Python 3.12 and React/TypeScript project scaffolding.
 - Typed domain contracts for candidates, neural evidence, sessions, and run manifests.
@@ -44,6 +49,19 @@ synthetic evaluation assets:
 No model or EEG dataset is downloaded by setup. The interface is an operational simulated/manual
 research demo, not a live or prerecorded-EEG BCI demo.
 
+## Paper and public-repository boundary
+
+The current paper is an offline computational methods manuscript. Read the canonical
+[Markdown manuscript](paper/manuscript.md), the editable [LaTeX/BibTeX bundle](paper/latex/), and
+the [submission checklist](paper/submission-checklist.md). The manuscript preserves synthetic
+language, original-task public EEG, counterfactual replay, and exploratory interface evidence as
+separate tiers.
+
+The repository intentionally excludes Study P downloads, processed EEG, Qwen weights, LoRA
+adapters, decoder checkpoints, local knowledge databases, and generated artifact bundles. See the
+[public repository boundary](docs/public-repository.md) for the exact included/excluded inventory
+and history-audit procedure.
+
 ## Development
 
 Prerequisites are `uv`, Node.js 22, and `pnpm` 10.
@@ -51,6 +69,7 @@ Prerequisites are `uv`, Node.js 22, and `pnpm` 10.
 ```bash
 make setup
 make verify
+make public-release-check
 ```
 
 Run the simulated interface in two terminals with:
@@ -532,7 +551,7 @@ Assemble the journal-neutral manuscript after the clean display exists:
 make manuscript MANUSCRIPT_ARGS="--overwrite"
 ```
 
-The assembler verifies the exact display manifest, all ten table and five figure markers, fifteen
+The assembler verifies the exact display manifest, all ten table and five figure markers, eighteen
 references, and the quantitative claim ledger before writing synchronized DOCX, LaTeX, BibTeX,
 compiled PDF, and rendered Markdown forms under `artifacts/publication/manuscript-v1/`. The LaTeX
 bundle is self-contained and includes the five exact PDF figures. Tectonic is required for the

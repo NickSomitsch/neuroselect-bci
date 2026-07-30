@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible problem using synthetic or otherwise shareable inputs.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Do not include raw EEG, personal messages, tokens, private knowledge records, or
+        license-restricted artifacts. Use a private security advisory for vulnerabilities or
+        accidental sensitive-data exposure.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Problem
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Provide the smallest reproduction using synthetic or public-safe inputs.
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: NeuroSelect revision
+      description: Commit SHA or version.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Python/Node versions, and relevant hardware without private filesystem paths.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Public-data confirmation
+      options:
+        - label: This report contains no credentials, personal data, raw EEG, or restricted artifacts.
+          required: true

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security or sensitive-data report
+    url: https://github.com/NickSomitsch/neuroselect-bci/security/advisories/new
+    about: Privately report vulnerabilities or accidental sensitive-data exposure.
+  - name: Responsible-use guidance
+    url: https://github.com/NickSomitsch/neuroselect-bci/blob/main/docs/responsible-use.md
+    about: Review the project's supported and prohibited uses before proposing deployment.

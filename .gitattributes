@@ -1,0 +1,21 @@
+* text=auto eol=lf
+
+*.cff text
+*.css text
+*.html text
+*.ipynb text
+*.js text
+*.json text
+*.lock text
+*.md text
+*.py text
+*.tex text
+*.toml text
+*.ts text
+*.tsx text
+*.yaml text
+*.yml text
+
+*.pdf binary
+*.png binary
+*.svg text

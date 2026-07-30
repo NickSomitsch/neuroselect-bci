@@ -649,6 +649,8 @@ def test_tracked_report_config_is_strict_and_release_metadata_is_complete(
         load_research_report_spec(invalid)
 
     assert check_tracked_release_files() == ()
+    assert "public-release-check:" in makefile
+    assert "scripts/check_public_repository.py" in makefile
 
 
 def test_release_file_check_reports_missing_boundaries_without_crashing(tmp_path: Path) -> None:
