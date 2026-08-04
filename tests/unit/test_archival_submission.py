@@ -112,7 +112,10 @@ def test_tracked_release_and_submission_specs_encode_zero_cost_route() -> None:
 
     assert release.version == "0.1.0"
     assert release.tag == "v0.1.0"
-    assert release.zenodo_doi is None
+    assert release.zenodo_doi == "10.5281/zenodo.21793545"
+    assert spec.author.orcid == "https://orcid.org/0009-0005-5436-4445"
+    assert spec.gates["orcid_validated"].status == "satisfied"
+    assert spec.gates["rbet_apc_fully_covered"].status == "not_applicable"
     assert len(release.artifact_sources) == 11
     assert selected_journal(spec) == "neuroinformatics"
     assert 150 <= len(submission._WORD.findall(spec.neuroinformatics_abstract.read_text())) <= 250
@@ -375,7 +378,9 @@ def test_submission_contracts_fail_closed_on_invalid_metadata_and_source(
         submission._replace_section("# Start\nsource", "# Start\n", "# End", "replacement")
 
     spec = _submission_spec(tmp_path, rbet_ready=False)
-    release = load_release_spec(ROOT / "configs/publication/release_v1.yaml")
+    release = load_release_spec(ROOT / "configs/publication/release_v1.yaml").model_copy(
+        update={"zenodo_doi": None}
+    )
     monkeypatch.setattr(submission, "load_release_spec", lambda _: release)
     pending_spec = spec.model_copy(
         update={

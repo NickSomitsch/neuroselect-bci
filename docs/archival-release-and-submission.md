@@ -12,11 +12,14 @@ and [Zenodo DOI reservation](https://help.zenodo.org/docs/deposit/describe-recor
 
 ## 1. Complete the external gates
 
-Register and validate an ORCID. Contact `open-access@uibk.ac.at` and the appropriate degree or
-departmental contact using the truthful description that the work was conducted independently
-while enrolled. Ask about affiliation, RBET coverage, corresponding-author and institutional-email
-requirements, the 2026 allocation, and approved secondary-use wording for public, deidentified
-Study P data. Do not commit correspondence or personal contact details.
+Register and validate an ORCID. The selected route is now Neuroinformatics subscription
+publication, so RBET APC coverage and `open-access@uibk.ac.at` confirmation are not required. If
+University of Innsbruck affiliation is still being considered, ask the appropriate degree or
+departmental contact whether that affiliation is truthful for work conducted independently while
+enrolled and whether the institution can provide a secondary-use ethics determination for public,
+deidentified Study P data. Otherwise use an unaffiliated author address and obtain acceptable
+secondary-use wording from the journal or another appropriate ethics authority. Do not commit
+correspondence or personal contact details.
 
 Obtain independent BCI review of EEG terminology, statistics, calibration, replay boundaries,
 candidate-generation claims, and limitations. A reviewer remains a reviewer unless they meet all

@@ -3,8 +3,8 @@ release_id: neuroselect-v0.1.0
 version: "0.1.0"
 tag: v0.1.0
 repository_url: https://github.com/NickSomitsch/neuroselect-bci
-# Fill only after reserving the version-specific Zenodo DOI. Final release checks fail while null.
-zenodo_doi: null
+# Reserved for this exact v0.1.0 record; the Zenodo draft remains unpublished until final release.
+zenodo_doi: 10.5281/zenodo.21793545
 source_license: MIT
 publication_license: CC-BY-4.0
 artifact_sources:

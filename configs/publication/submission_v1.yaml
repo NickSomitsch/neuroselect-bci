@@ -7,7 +7,7 @@ release_config: configs/publication/release_v1.yaml
 reviewer_archive_url: null
 author:
   name: Nick Somitsch
-  orcid: null
+  orcid: https://orcid.org/0009-0005-5436-4445
   # Use "Independent Researcher" unless UIBK approves institutional affiliation in writing.
   affiliation: null
   email: null
@@ -43,9 +43,9 @@ rbet_required_gates:
   - rbet_apc_fully_covered
 gates:
   orcid_validated:
-    status: pending
-    checked_on: null
-    public_note: Register and validate the sole author's ORCID before generating final metadata.
+    status: satisfied
+    checked_on: 2026-08-04
+    public_note: The author supplied the ORCID; its public record resolved to Nick Somitsch on 2026-08-04.
   authorship_confirmed:
     status: pending
     checked_on: null
@@ -73,12 +73,12 @@ gates:
   selected_route_approved:
     status: pending
     checked_on: null
-    public_note: Confirm the selected journal route, declarations, and no simultaneous consideration elsewhere.
+    public_note: Neuroinformatics subscription publication was selected; final confirmation still requires completed declarations and no simultaneous consideration elsewhere.
   uibk_affiliation_approved:
     status: pending
     checked_on: null
     public_note: UIBK must confirm in writing that student affiliation is truthful for this independent work.
   rbet_apc_fully_covered:
-    status: pending
-    checked_on: null
-    public_note: UIBK must confirm full 2026 RBET APC coverage and corresponding-author eligibility in writing.
+    status: not_applicable
+    checked_on: 2026-08-04
+    public_note: The author selected the Neuroinformatics subscription route, so RBET APC coverage is not being relied upon.

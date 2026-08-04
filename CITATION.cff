@@ -5,9 +5,11 @@ type: software
 authors:
   - family-names: Somitsch
     given-names: Nick
+    orcid: "https://orcid.org/0009-0005-5436-4445"
 license: MIT
 repository-code: "https://github.com/NickSomitsch/neuroselect-bci"
 version: 0.1.0
+doi: "10.5281/zenodo.21793545"
 keywords:
   - brain-computer interface
   - P300

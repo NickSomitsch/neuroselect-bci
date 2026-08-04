@@ -32,8 +32,9 @@ submission remains fail-closed.
   data; do not independently assert exemption.
 - [ ] Ask whether University of Innsbruck affiliation is truthful for independently conducted
   student work; otherwise use `Independent Researcher`.
-- [ ] Ask whether an institutional email is required for the selected route.
-- [ ] Confirm ORCID.
+- [x] Confirm that Neuroinformatics requires an active correspondence email but does not require
+  an institutional email for an unaffiliated author.
+- [x] Confirm ORCID (`https://orcid.org/0009-0005-5436-4445`).
 - [ ] Confirm funding statement.
 - [ ] Confirm competing-interest statement.
 - [ ] Confirm final CRediT roles.
@@ -42,11 +43,12 @@ submission remains fail-closed.
 
 ## Venue preparation and archive
 
-- [ ] Ask `open-access@uibk.ac.at` whether the primary journal, Original Research article type,
-  student corresponding-author status, and remaining Taylor & Francis allocation are eligible.
-- [ ] Select RBET only after written affiliation and full-coverage confirmation; otherwise select
-  the Neuroinformatics €0 subscription route.
-- [ ] Reserve a version-specific Zenodo DOI and add it to the tracked release metadata.
+- [x] Mark the RBET/Taylor & Francis open-access inquiry not applicable after selecting the
+  Neuroinformatics subscription route.
+- [x] Select the Neuroinformatics €0 subscription route; RBET APC coverage is not being relied
+  upon.
+- [x] Reserve the version-specific Zenodo DOI (`10.5281/zenodo.21793545`) and add it to the tracked
+  release metadata.
 - [ ] Recheck the selected journal's current author instructions immediately before submission.
 - [ ] Adapt title page, abstract length, headings, reference style, figure placement, declarations,
   and supplementary files without changing the evidence hierarchy.
