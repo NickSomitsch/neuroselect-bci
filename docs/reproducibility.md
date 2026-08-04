@@ -212,3 +212,13 @@ Final assembly rejects a dirty worktree. For implementation-time page rendering 
 flag before external review. The final command fails if the committed LaTeX source is stale or the
 PDF does not compile. `submission_ready` remains false until every external protocol gate is
 satisfied.
+
+## Archival release and journal package
+
+The final source/evidence archive and journal-package procedure is documented in
+[`docs/archival-release-and-submission.md`](archival-release-and-submission.md). The two release
+archives are deterministic and independently inventoried. Research files enter only through a
+completed, checksum-pinned manifest; executable checkpoints and restricted artifact classes are
+excluded. Journal builders enforce the €0 route, external author/declaration gates,
+Neuroinformatics template rules, and RBET reviewer anonymity. `--allow-pending` produces only a
+development preview and never satisfies a submission gate.

@@ -669,10 +669,10 @@ def test_release_file_check_rejects_ui_version_drift(tmp_path: Path) -> None:
         shutil.copyfile(ROOT / relative, destination)
     ui_package = tmp_path / "ui/package.json"
     ui_package.write_text(
-        ui_package.read_text(encoding="utf-8").replace("0.1.0-dev.0", "0.2.0"),
+        ui_package.read_text(encoding="utf-8").replace("0.1.0", "0.2.0"),
         encoding="utf-8",
     )
 
-    assert "UI package version '0.2.0' does not match project version '0.1.0.dev0'" in (
+    assert "UI package version '0.2.0' does not match project version '0.1.0'" in (
         check_tracked_release_files(tmp_path)
     )

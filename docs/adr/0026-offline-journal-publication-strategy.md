@@ -1,6 +1,6 @@
 # ADR 0026: Offline journal publication strategy
 
-- Status: Accepted
+- Status: Superseded by ADR 0032 for venue routing; evidence-contract decisions remain accepted
 - Date: 2026-07-27
 
 ## Context
@@ -17,10 +17,10 @@ candidate-generation v2 work can, however, be locked prospectively from this dec
 
 ## Decision
 
-Target *Research in Biomedical Engineering and Technology* with an Original Research article
-framed as an offline BCI/neural-engineering methods and validation study. Use *Frontiers in
-Neuroinformatics* only as a funded fallback. Consider JOSS later as a distinct software paper
-after sustained public maturation; it is not a venue switch for the empirical manuscript.
+The original venue preference was *Research in Biomedical Engineering and Technology*, with a
+funded fallback considered at the time. ADR 0032 replaces that routing with a strict €0 rule:
+RBET only after confirmed UIBK affiliation and full APC coverage, otherwise Neuroinformatics via
+subscription publishing. The evidence-framing decisions below remain unchanged.
 
 The tracked `offline_methods_v1` protocol fixes five research questions, the primary estimands,
 the exact source runs and manifest digests, allowed and prohibited claims, and external submission

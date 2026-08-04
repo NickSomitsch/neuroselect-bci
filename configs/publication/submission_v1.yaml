@@ -1,0 +1,84 @@
+schema_version: "1.0"
+submission_id: neuroselect-journal-submission-v1
+manuscript_config: configs/publication/manuscript_v1.yaml
+manuscript_artifacts: artifacts/publication/manuscript-v1
+release_config: configs/publication/release_v1.yaml
+# For RBET, add only an anonymous private-review URL approved for double-anonymous review.
+reviewer_archive_url: null
+author:
+  name: Nick Somitsch
+  orcid: null
+  # Use "Independent Researcher" unless UIBK approves institutional affiliation in writing.
+  affiliation: null
+  email: null
+  corresponding_author: true
+  contributions: null
+declarations:
+  # These values are author-supplied and never inferred by the builder.
+  funding: null
+  competing_interests: null
+  ethics: null
+  consent_to_participate: "Not applicable; no participant was recruited and nobody used NeuroSelect."
+  consent_for_publication: "Not applicable; no participant-authored communication is reported."
+  ai_use: "OpenAI Codex assisted with software development, analysis workflows, and manuscript preparation. Nick Somitsch verified the resulting code, analyses, and text and retains full responsibility for the work."
+keywords:
+  - brain-computer interface
+  - P300
+  - language prediction
+  - personalization
+  - candidate generation
+  - reproducible research
+neuroinformatics_abstract: paper/submission/neuroinformatics/abstract.md
+common_required_gates:
+  - orcid_validated
+  - authorship_confirmed
+  - funding_confirmed
+  - competing_interests_confirmed
+  - secondary_use_wording_approved
+  - independent_bci_review_completed
+  - ai_use_disclosure_confirmed
+  - selected_route_approved
+rbet_required_gates:
+  - uibk_affiliation_approved
+  - rbet_apc_fully_covered
+gates:
+  orcid_validated:
+    status: pending
+    checked_on: null
+    public_note: Register and validate the sole author's ORCID before generating final metadata.
+  authorship_confirmed:
+    status: pending
+    checked_on: null
+    public_note: Confirm sole authorship or document qualifying contributions and final CRediT roles.
+  funding_confirmed:
+    status: pending
+    checked_on: null
+    public_note: Author must supply the exact funding declaration; no funding status is inferred.
+  competing_interests_confirmed:
+    status: pending
+    checked_on: null
+    public_note: Author must supply the exact competing-interests declaration.
+  secondary_use_wording_approved:
+    status: pending
+    checked_on: null
+    public_note: Obtain approved wording for public deidentified Study P secondary analysis without inventing an exemption.
+  independent_bci_review_completed:
+    status: pending
+    checked_on: null
+    public_note: Independent review must cover EEG terminology, statistics, calibration, replay boundaries, candidate generation, and limitations.
+  ai_use_disclosure_confirmed:
+    status: pending
+    checked_on: null
+    public_note: Confirm the tracked Codex assistance disclosure accurately describes actual use.
+  selected_route_approved:
+    status: pending
+    checked_on: null
+    public_note: Confirm the selected journal route, declarations, and no simultaneous consideration elsewhere.
+  uibk_affiliation_approved:
+    status: pending
+    checked_on: null
+    public_note: UIBK must confirm in writing that student affiliation is truthful for this independent work.
+  rbet_apc_fully_covered:
+    status: pending
+    checked_on: null
+    public_note: UIBK must confirm full 2026 RBET APC coverage and corresponding-author eligibility in writing.

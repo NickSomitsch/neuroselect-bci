@@ -30,7 +30,9 @@ submission remains fail-closed.
 
 - [ ] Obtain institutionally approved wording for secondary use of public, deidentified Study P
   data; do not independently assert exemption.
-- [ ] Confirm University of Innsbruck affiliation and institutional email.
+- [ ] Ask whether University of Innsbruck affiliation is truthful for independently conducted
+  student work; otherwise use `Independent Researcher`.
+- [ ] Ask whether an institutional email is required for the selected route.
 - [ ] Confirm ORCID.
 - [ ] Confirm funding statement.
 - [ ] Confirm competing-interest statement.
@@ -38,14 +40,20 @@ submission remains fail-closed.
 - [ ] Confirm final authorship. A reviewer becomes an author only after a qualifying intellectual
   contribution and acceptance of responsibility.
 
-## Venue preparation
+## Venue preparation and archive
 
 - [ ] Ask `open-access@uibk.ac.at` whether the primary journal, Original Research article type,
   student corresponding-author status, and remaining Taylor & Francis allocation are eligible.
-- [ ] Recheck the primary journal's current author instructions immediately before submission.
+- [ ] Select RBET only after written affiliation and full-coverage confirmation; otherwise select
+  the Neuroinformatics €0 subscription route.
+- [ ] Reserve a version-specific Zenodo DOI and add it to the tracked release metadata.
+- [ ] Recheck the selected journal's current author instructions immediately before submission.
 - [ ] Adapt title page, abstract length, headings, reference style, figure placement, declarations,
   and supplementary files without changing the evidence hierarchy.
 - [ ] Prepare a cover letter that describes the work as offline computational Original Research.
 - [ ] Explicitly state that no participant used NeuroSelect and that counterfactual phrases were not
   participant-authored selections.
 - [ ] Generate and archive the final clean submission manifest.
+- [ ] Build and independently verify deterministic source and public-evidence archives twice.
+- [ ] Create annotated tag `v0.1.0`, publish the exact GitHub release, upload identical files to
+  Zenodo, download once, and verify every checksum.

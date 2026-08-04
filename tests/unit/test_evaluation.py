@@ -307,7 +307,7 @@ def test_artifacts_are_byte_stable_and_manifest_checksums_match(tmp_path: Path) 
         assert (first_dir / filename).read_bytes() == (second_dir / filename).read_bytes()
     assert first_manifest == second_manifest
     assert first_manifest.package_versions["python"]
-    assert first_manifest.package_versions["neuroselect-bci"] == "0.1.0.dev0"
+    assert first_manifest.package_versions["neuroselect-bci"] == "0.1.0"
     assert first_manifest.device["system"]
     assert first_manifest.device["machine"]
     assert {model.artifact_id for model in first_manifest.models} == {

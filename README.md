@@ -569,10 +569,23 @@ means that all document formats and their inputs came from clean verified source
 `submission_ready`. During implementation, `--allow-dirty` permits visual QA while keeping
 assembly readiness false.
 
-The next paper step is independent scientific review and journal-specific submission preparation.
-Use the [submission checklist](paper/submission-checklist.md) to obtain BCI review, institutional
-secondary-use wording, open-access confirmation, and final author metadata before adapting the
-journal-neutral LaTeX source to a venue template.
+The archival and journal packaging layer is implemented, but final assembly remains blocked on
+external metadata and decisions. Follow the [archival release and submission guide](docs/archival-release-and-submission.md)
+and [submission checklist](paper/submission-checklist.md). RBET is permitted only after written
+UIBK affiliation and full-APC confirmation; otherwise the configured route is Neuroinformatics
+subscription publication at €0. Development previews can be inspected with:
+
+```bash
+make publication-release PUBLICATION_RELEASE_ARGS="--allow-pending --overwrite"
+make publication-release-check PUBLICATION_RELEASE_CHECK_ARGS="--allow-pending"
+make journal-submission JOURNAL=neuroinformatics \
+  JOURNAL_SUBMISSION_ARGS="--allow-pending --overwrite"
+make journal-submission-check JOURNAL=neuroinformatics \
+  JOURNAL_SUBMISSION_CHECK_ARGS="--allow-pending"
+```
+
+Final builds omit `--allow-pending`, require an exact clean `v0.1.0` tag and reserved Zenodo DOI,
+and reject incomplete declarations or altered evidence.
 
 ## Research boundaries
 
@@ -585,4 +598,6 @@ Before contributing claims or experiment code, review the [research-scope ADR](d
 
 ## License
 
-Source code is licensed under the MIT License. Datasets, model weights, and derived artifacts retain their own licenses and must be cited separately.
+Source code is licensed under the MIT License. Original distributable publication displays and
+research summaries are CC BY 4.0. Datasets, model weights, adapters, and checkpoints retain their
+own terms and are not redistributed. See [release licensing](LICENSES.md).

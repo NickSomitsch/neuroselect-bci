@@ -1,0 +1,78 @@
+schema_version: "1.0"
+release_id: neuroselect-v0.1.0
+version: "0.1.0"
+tag: v0.1.0
+repository_url: https://github.com/NickSomitsch/neuroselect-bci
+# Fill only after reserving the version-specific Zenodo DOI. Final release checks fail while null.
+zenodo_doi: null
+source_license: MIT
+publication_license: CC-BY-4.0
+artifact_sources:
+  - source_id: primary-analysis
+    path: artifacts/publication/offline-methods-v1
+    expected_manifest_sha256: 41178515d71edf1c90c6e82fad68e9ee1707d32baee3d63e74d9033e3e3dcafc
+    purpose: Frozen primary and secondary statistical synthesis cited by the manuscript
+    license: CC-BY-4.0
+  - source_id: candidate-generation-v2
+    path: artifacts/publication/candidate-generation-v2-exploratory-v1
+    expected_manifest_sha256: 19db319a0871a9c7d73c38d902a402c48cef3537e65be4089efe30ba2714de2b
+    purpose: Target-blind exploratory candidate-generation analysis
+    license: CC-BY-4.0
+  - source_id: candidate-generation-step4
+    path: artifacts/publication/candidate-generation-step4-v1
+    expected_manifest_sha256: ec401079ce88d4a7d275e9bb5b519a5fcf95f06dbb80f48ea4e490cdd120b1e6
+    purpose: Locked follow-up candidate-generation analysis
+    license: CC-BY-4.0
+  - source_id: opening-generalization
+    path: artifacts/publication/opening-generalization-v1
+    expected_manifest_sha256: cab79edd52a29266724840d227b7d8086bebcdbadcaa23bf14f317fbd4eb21b6
+    purpose: Locked message-opening generalization analysis
+    license: CC-BY-4.0
+  - source_id: paper-display
+    path: artifacts/publication/paper-display-v1
+    expected_manifest_sha256: b330a336b83585bd2436b23de001710f29d85e480ae38dd73b2d270e6f656c2b
+    purpose: Publication tables, figures, captions, and display inventory
+    license: CC-BY-4.0
+  - source_id: manuscript
+    path: artifacts/publication/manuscript-v1
+    expected_manifest_sha256: a04b957b1e19474284d612a3c2b80b6706b59b8ea3ec2c459b87e6277ca938cb
+    purpose: Verified manuscript assembly and quantitative claim audit
+    license: CC-BY-4.0
+  - source_id: research-report
+    path: artifacts/reports/neuroselect-research-release-v1
+    expected_manifest_sha256: 79d8c009a41aaefab190a62d729b979bb65d15bcba33437f494465c44ace0c73
+    purpose: Frozen research evidence report
+    license: CC-BY-4.0
+  - source_id: held-out-language
+    path: artifacts/evaluation/held-out-language-personalization-research-v1
+    expected_manifest_sha256: 0ae04ed11f8ff842503a9f3ec241841b4ff20a0baf46445648d3c6e7c4069b65
+    purpose: Held-out language evaluation summaries
+    license: CC-BY-4.0
+  - source_id: counterfactual-fusion
+    path: artifacts/evaluation/counterfactual-fusion-research-v1
+    expected_manifest_sha256: 789d75b415c32133d85cfae3b043c9b21230089345001b5c53f330590041cef6
+    purpose: Counterfactual replay evaluation summaries
+    license: CC-BY-4.0
+  - source_id: p300-xdawn
+    path: artifacts/models/p300-xdawn-lda-research-v1
+    expected_manifest_sha256: 729c080fab7e848e7a363fcc50cdf44897cad9b4b407a053f74c27271b0061a6
+    purpose: Original-task xDAWN plus LDA evaluation metadata
+    license: CC-BY-4.0
+  - source_id: p300-eegnet
+    path: artifacts/models/p300-eegnet-research-v1
+    expected_manifest_sha256: aa5fb6a6f426ed3bcf2c3c033250c1209ffe3e92348260f07d940ff2685d9744
+    purpose: Original-task EEGNet evaluation metadata
+    license: CC-BY-4.0
+excluded_artifact_classes:
+  - artifact_class: raw-or-processed-study-p-eeg
+    reason: Study P is accessed from its original public source under its own terms and is not redistributed.
+  - artifact_class: qwen-model-weights-and-caches
+    reason: Base-model files retain upstream terms and are reproducibly downloaded from the pinned source.
+  - artifact_class: lora-adapters
+    reason: Trained adapter payloads are excluded; evaluation summaries and provenance remain available.
+  - artifact_class: executable-model-checkpoints
+    reason: Joblib, PyTorch, safetensors, and intermediate checkpoint payloads are not archival research outputs.
+  - artifact_class: temporary-cloud-and-log-files
+    reason: Cloud bundles, caches, terminal logs, and temporary checkpoints are operational rather than evidence.
+  - artifact_class: credentials-and-private-correspondence
+    reason: Secrets, personal contact data, gate correspondence, and reviewer correspondence must never enter a release.
